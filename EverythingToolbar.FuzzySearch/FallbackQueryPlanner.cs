@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 
 namespace EverythingToolbar.FuzzySearch
 {
@@ -12,7 +13,8 @@ namespace EverythingToolbar.FuzzySearch
     /// <summary>
     /// Builds the corrected fallback query for a raw query that returned zero results. Only safe
     /// plain literals (per <see cref="SafeLiteralClassifier"/>) are touched, and raw text is kept
-    /// inside OR groups, never deleted. Everything structure is copied through verbatim.
+    /// inside OR groups, never deleted. Everything structure is copied through verbatim. Zero-result
+    /// gating (raw query wins) is enforced by the caller, not here.
     /// </summary>
     public sealed class FallbackQueryPlanner
     {
@@ -30,9 +32,7 @@ namespace EverythingToolbar.FuzzySearch
             _candidates = candidates;
         }
 
-        internal ITypoCandidateProvider? TypoCandidates => _candidates;
-
-        public FallbackPlan? Plan(string rawQuery)
+        public FallbackPlan? Plan(string rawQuery, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(rawQuery))
             {
@@ -61,7 +61,7 @@ namespace EverythingToolbar.FuzzySearch
                     continue;
                 }
 
-                var alternatives = CollectAlternatives(term.Text);
+                var alternatives = CollectAlternatives(term.Text, cancellationToken);
                 if (alternatives.Count == 0)
                 {
                     continue;
@@ -76,18 +76,34 @@ namespace EverythingToolbar.FuzzySearch
             return corrections.Count > 0 ? new FallbackPlan(corrected.ToString(), corrections) : null;
         }
 
-        private List<string> CollectAlternatives(string term)
+        private List<string> CollectAlternatives(string term, CancellationToken cancellationToken)
         {
             var alternatives = new List<string>();
 
-            var canonical = _aliases?.TryGetCanonical(term);
-            if (
-                !string.IsNullOrEmpty(canonical)
-                && canonical.IndexOf(' ') < 0
-                && !alternatives.Contains(canonical, StringComparer.OrdinalIgnoreCase)
-            )
+            void AddIfValid(string? candidate)
             {
-                alternatives.Add(canonical);
+                if (
+                    string.IsNullOrEmpty(candidate)
+                    || candidate.IndexOf(' ') >= 0
+                    || candidate.Equals(term, StringComparison.OrdinalIgnoreCase)
+                    || alternatives.Contains(candidate, StringComparer.OrdinalIgnoreCase)
+                )
+                {
+                    return;
+                }
+
+                alternatives.Add(candidate);
+            }
+
+            // Explicit preferred spellings rank above inferred typo candidates.
+            AddIfValid(_aliases?.TryGetCanonical(term));
+
+            if (_candidates is not null)
+            {
+                foreach (var candidate in _candidates.FindCandidates(term, MaxAlternativesPerTerm, cancellationToken))
+                {
+                    AddIfValid(candidate.Correction);
+                }
             }
 
             return alternatives;

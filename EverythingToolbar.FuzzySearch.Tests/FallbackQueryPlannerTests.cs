@@ -15,7 +15,7 @@ namespace EverythingToolbar.FuzzySearch.Tests
         [InlineData("guthikodna", "Guthikonda")]
         [InlineData("ollma", "ollama")]
         [InlineData("kanataa", "kanata")]
-        public void Plan_TypoQuery_CorrectsSingleLiteral(string typo, string correction)
+        public void Plan_TypoQuery_KeepsRawAndAddsCorrectionInOrGroup(string typo, string correction)
         {
             var planner = new FallbackQueryPlanner(
                 candidates: FakeCandidateProvider.FromCorrections((typo, correction))
@@ -24,7 +24,7 @@ namespace EverythingToolbar.FuzzySearch.Tests
             var plan = planner.Plan(typo);
 
             Assert.NotNull(plan);
-            Assert.Equal(correction, plan!.CorrectedQuery);
+            Assert.Equal($"<{typo}|{correction}>", plan!.CorrectedQuery);
             Assert.Contains(plan.Corrections, c => c.Original == typo && c.Corrected == correction);
         }
 
@@ -38,7 +38,7 @@ namespace EverythingToolbar.FuzzySearch.Tests
             var plan = planner.Plan("clinical attachement ext:pdf");
 
             Assert.NotNull(plan);
-            Assert.Equal("clinical attachment ext:pdf", plan!.CorrectedQuery);
+            Assert.Equal("clinical <attachement|attachment> ext:pdf", plan!.CorrectedQuery);
             var correction = Assert.Single(plan.Corrections);
             Assert.Equal("attachement", correction.Original);
         }
@@ -54,8 +54,8 @@ namespace EverythingToolbar.FuzzySearch.Tests
         [Fact]
         public void Plan_ExactMatch_ProtectsRawTerm()
         {
-            // The raw query matched something (zero-result gating happens above the planner), so a
-            // "correction" that equals the original term must never be planned.
+            // The provider contract never returns the term itself; the planner also defends against
+            // it. Zero-result gating (raw query wins when it matches) happens above the planner.
             var provider = new FakeCandidateProvider(
                 new Dictionary<string, IReadOnlyList<TypoCandidate>>
                 {
@@ -65,6 +65,68 @@ namespace EverythingToolbar.FuzzySearch.Tests
             var planner = new FallbackQueryPlanner(candidates: provider);
 
             Assert.Null(planner.Plan("from"));
+        }
+
+        [Fact]
+        public void Plan_AliasAndTypoCandidates_PutsAliasFirst()
+        {
+            var provider = new FakeCandidateProvider(
+                new Dictionary<string, IReadOnlyList<TypoCandidate>>
+                {
+                    ["colour"] = new[] { new TypoCandidate("chlor", 2, 9), new TypoCandidate("color", 1, 5) },
+                }
+            );
+            var planner = new FallbackQueryPlanner(
+                new AliasStore(new[] { new AliasGroup("color", new[] { "colour" }) }),
+                provider
+            );
+
+            var plan = planner.Plan("colour notes");
+
+            Assert.NotNull(plan);
+            Assert.Equal("<colour|color|chlor> notes", plan!.CorrectedQuery);
+        }
+
+        [Fact]
+        public void Plan_CapsAlternativesPerTerm()
+        {
+            var provider = new FakeCandidateProvider(
+                new Dictionary<string, IReadOnlyList<TypoCandidate>>
+                {
+                    ["attachement"] = new[]
+                    {
+                        new TypoCandidate("attachment", 1, 10),
+                        new TypoCandidate("attachments", 2, 4),
+                        new TypoCandidate("attach", 2, 3),
+                        new TypoCandidate("attachable", 2, 2),
+                        new TypoCandidate("attache", 2, 1),
+                    },
+                }
+            );
+            var planner = new FallbackQueryPlanner(candidates: provider);
+
+            var plan = planner.Plan("attachement");
+
+            Assert.NotNull(plan);
+            Assert.Equal("<attachement|attachment|attachments|attach>", plan!.CorrectedQuery);
+            Assert.Equal(FallbackQueryPlanner.MaxAlternativesPerTerm, plan.Corrections[0].Corrected.Split('|').Length);
+        }
+
+        [Fact]
+        public void Plan_KeepsCandidateOrderFromProvider()
+        {
+            var provider = new FakeCandidateProvider(
+                new Dictionary<string, IReadOnlyList<TypoCandidate>>
+                {
+                    ["docuemnt"] = new[] { new TypoCandidate("document", 1, 10), new TypoCandidate("documents", 2, 4) },
+                }
+            );
+            var planner = new FallbackQueryPlanner(candidates: provider);
+
+            var plan = planner.Plan("docuemnt");
+
+            Assert.NotNull(plan);
+            Assert.Equal("<docuemnt|document|documents>", plan!.CorrectedQuery);
         }
 
         [Fact]
