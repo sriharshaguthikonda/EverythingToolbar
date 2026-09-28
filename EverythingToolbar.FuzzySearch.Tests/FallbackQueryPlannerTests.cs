@@ -17,7 +17,9 @@ namespace EverythingToolbar.FuzzySearch.Tests
         [InlineData("kanataa", "kanata")]
         public void Plan_TypoQuery_CorrectsSingleLiteral(string typo, string correction)
         {
-            var planner = new FallbackQueryPlanner(FakeCandidateProvider.FromCorrections((typo, correction)));
+            var planner = new FallbackQueryPlanner(
+                candidates: FakeCandidateProvider.FromCorrections((typo, correction))
+            );
 
             var plan = planner.Plan(typo);
 
@@ -30,7 +32,7 @@ namespace EverythingToolbar.FuzzySearch.Tests
         public void Plan_MixedQuery_CorrectsOnlyPlainLiteral()
         {
             var planner = new FallbackQueryPlanner(
-                FakeCandidateProvider.FromCorrections(("attachement", "attachment"))
+                candidates: FakeCandidateProvider.FromCorrections(("attachement", "attachment"))
             );
 
             var plan = planner.Plan("clinical attachement ext:pdf");
@@ -44,7 +46,7 @@ namespace EverythingToolbar.FuzzySearch.Tests
         [Fact]
         public void Plan_NoCandidates_ReturnsNull()
         {
-            var planner = new FallbackQueryPlanner(FakeCandidateProvider.FromCorrections());
+            var planner = new FallbackQueryPlanner(candidates: FakeCandidateProvider.FromCorrections());
 
             Assert.Null(planner.Plan("neurosicence"));
         }
@@ -60,9 +62,72 @@ namespace EverythingToolbar.FuzzySearch.Tests
                     ["from"] = new[] { new TypoCandidate("from", 0, 10) },
                 }
             );
-            var planner = new FallbackQueryPlanner(provider);
+            var planner = new FallbackQueryPlanner(candidates: provider);
 
             Assert.Null(planner.Plan("from"));
+        }
+
+        [Fact]
+        public void Plan_WholeQueryAlias_ReplacesQueryWithCanonical()
+        {
+            var planner = new FallbackQueryPlanner(
+                new AliasStore(new[] { new AliasGroup("repomaps", new[] { "repo map" }) })
+            );
+
+            var plan = planner.Plan("repo map");
+
+            Assert.NotNull(plan);
+            Assert.Equal("repomaps", plan!.CorrectedQuery);
+            var correction = Assert.Single(plan.Corrections);
+            Assert.Equal("repo map", correction.Original);
+        }
+
+        [Fact]
+        public void Plan_TermAlias_KeepsRawInOrGroup()
+        {
+            var planner = new FallbackQueryPlanner(
+                new AliasStore(new[] { new AliasGroup("color", new[] { "colour" }) })
+            );
+
+            var plan = planner.Plan("colour ext:pdf");
+
+            Assert.NotNull(plan);
+            Assert.Equal("<colour|color> ext:pdf", plan!.CorrectedQuery);
+        }
+
+        [Fact]
+        public void Plan_CanonicalTypedExactly_DoesNotExpand()
+        {
+            var planner = new FallbackQueryPlanner(
+                new AliasStore(new[] { new AliasGroup("color", new[] { "colour" }) })
+            );
+
+            Assert.Null(planner.Plan("color"));
+        }
+
+        [Fact]
+        public void Plan_MultiWordCanonical_IsSkippedInTermPosition()
+        {
+            var planner = new FallbackQueryPlanner(
+                new AliasStore(new[] { new AliasGroup("repomaps", new[] { "repo map" }) })
+            );
+
+            // "repo map" as a whole query is an alias, but here it is embedded next to structure.
+            Assert.Null(planner.Plan("repo map ext:pdf"));
+        }
+
+        [Fact]
+        public void Plan_WithoutAliasesOrCandidates_ReturnsNull()
+        {
+            var planner = new FallbackQueryPlanner();
+
+            Assert.Null(planner.Plan("neurosicence"));
+        }
+
+        [Fact]
+        public void Plan_EmptyQuery_ReturnsNull()
+        {
+            Assert.Null(new FallbackQueryPlanner().Plan(""));
         }
     }
 }
