@@ -1,0 +1,126 @@
+{
+  "schemaVersion": "0.1.0",
+  "repo": {
+    "id": "EverythingToolbar",
+    "root": ".",
+    "remoteUrl": "https://github.com/srwi/EverythingToolbar.git",
+    "defaultBranch": "feature/typo-tolerant-search",
+    "localPaths": [
+      ".config",
+      ".csharpierignore",
+      ".editorconfig",
+      ".gitattributes",
+      ".github",
+      ".gitignore",
+      "CONTRIBUTING.md",
+      "Directory.Build.props",
+      "Directory.Packages.props",
+      "EverythingSDK",
+      "EverythingSDK3",
+      "EverythingToolbar",
+      "EverythingToolbar.App",
+      "EverythingToolbar.Core",
+      "EverythingToolbar.Deskband",
+      "EverythingToolbar.FuzzySearch",
+      "EverythingToolbar.FuzzySearch.Tests",
+      "EverythingToolbar.Launcher",
+      "EverythingToolbar.Platform",
+      "EverythingToolbar.sln",
+      "FAQ.md",
+      "Installer",
+      "LICENSE",
+      "README.md",
+      "README.zh-CN.md",
+      "Settings.XamlStyler",
+      "crowdin.yml",
+      "docs",
+      "tools"
+    ]
+  },
+  "sourceState": {
+    "commit": "91c530165d1914e1fbbf7a0a5c73896fccf204fa",
+    "branch": "feature/typo-tolerant-search",
+    "dirty": false,
+    "generatedForCommit": "91c530165d1914e1fbbf7a0a5c73896fccf204fa",
+    "sourceFingerprint": "10667d2a186f239d9cb8c66aae772c30a3a00489dfa9b33c075a09a9cdfef396"
+  },
+  "policy": {
+    "profile": "basic",
+    "sensitivity": "private",
+    "committedArtifacts": [
+      "manifest"
+    ],
+    "allowMemoryPointer": false,
+    "allowGraphPilots": false,
+    "runOnPush": false
+  },
+  "generatedAt": "2026-09-28T22:09:11.093549Z",
+  "toolRuns": [
+    {
+      "id": "repomix.basic",
+      "tool": "repomix",
+      "mode": "basic",
+      "status": "passed",
+      "outputRef": "artifacts/repomix/repo-map.json",
+      "warnings": [
+        "Repomix is available via `repomix`.",
+        "Suggested command: `repomix --output artifacts/repomix/repo-map.json`.",
+        "Repomix output is a native artifact and is not committed by default."
+      ]
+    },
+    {
+      "id": "aider.basic",
+      "tool": "aider",
+      "mode": "basic",
+      "status": "passed",
+      "outputRef": "artifacts/aider/repo-map-guidance.md",
+      "warnings": [
+        "Aider records repo-map guidance without forcing an interactive run.",
+        "Suggested command: `C:\\Users\\deletable\\.local\\bin\\aider.EXE --help`.",
+        "Baseline guidance output lives in an artifact path and is not committed by default."
+      ]
+    },
+    {
+      "id": "serena.basic",
+      "tool": "serena",
+      "mode": "basic",
+      "status": "passed",
+      "outputRef": "artifacts/serena/capability.json",
+      "warnings": [
+        "Serena records ephemeral live-symbol capability without auto-configuring global state.",
+        "Suggested command: `serena start-mcp-server --project-from-cwd --context=codex`.",
+        "Serena query results are ephemeral; durable repo context stays in Repo_maps artifacts."
+      ]
+    }
+  ],
+  "artifacts": {
+    "manifestPath": ".repo-intel/manifest.json",
+    "summaryPath": ".repo-intel/summary.md",
+    "nativeOutputs": [
+      {
+        "name": "serena",
+        "path": "artifacts/serena/capability.json",
+        "kind": "native"
+      },
+      {
+        "name": "repo-map-full",
+        "path": "artifacts/repo-map/repo-map-full.json",
+        "kind": "native"
+      }
+    ],
+    "workflowArtifacts": []
+  },
+  "contextLevels": {
+    "level0": "identity",
+    "level1": "summary",
+    "level2": "importantFiles",
+    "level3": "symbols",
+    "level4": "fullExport"
+  },
+  "staleness": "current",
+  "security": {
+    "ignorePolicy": ".repo-map-ignore",
+    "secretScanStatus": "skipped",
+    "sizeGateStatus": "skipped"
+  }
+}
