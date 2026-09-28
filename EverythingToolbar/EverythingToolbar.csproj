@@ -23,7 +23,7 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\EverythingSDK\EverythingSDK.vcxproj" />
+    <ProjectReference Include="..\EverythingSDK\EverythingSDK.vcxproj" Condition="'$(FuzzyManagedOnlyBuild)' != 'true'" />
     <ProjectReference Include="..\EverythingToolbar.App\EverythingToolbar.App.csproj" />
     <ProjectReference Include="..\EverythingToolbar.Core\EverythingToolbar.Core.csproj" />
     <ProjectReference Include="..\EverythingToolbar.Platform\EverythingToolbar.Platform.csproj" />

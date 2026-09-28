@@ -10,6 +10,8 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\EverythingToolbar.Core\EverythingToolbar.Core.csproj" />
+    <ProjectReference Include="..\EverythingToolbar.FuzzySearch\EverythingToolbar.FuzzySearch.csproj" />
+    <ProjectReference Include="..\EverythingToolbar.Platform\EverythingToolbar.Platform.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="EverythingToolbar.App.Services" />

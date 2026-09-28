@@ -172,5 +172,8 @@ namespace EverythingToolbar.App
 
         [Option(DefaultValue = 37)]
         int SearchWindowBackgroundBrightness { get; set; }
+
+        [Option(DefaultValue = true)]
+        bool IsTypoTolerantSearchEnabled { get; set; }
     }
 }

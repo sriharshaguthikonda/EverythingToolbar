@@ -17,18 +17,19 @@ namespace EverythingToolbar.FuzzySearch
 
         private readonly TokenVocabulary _vocabulary;
         private readonly object _gate = new();
-        private SymSpell _symSpell;
+        private SymSpell _symSpell = new(SymSpellInitialCapacity, MaxDictionaryEditDistance, PrefixLength);
+        private bool _built;
 
         public SymSpellCandidateProvider(TokenVocabulary vocabulary)
         {
             _vocabulary = vocabulary;
-            _symSpell = Build(vocabulary);
         }
 
         public int EntryCount
         {
             get
             {
+                EnsureBuilt();
                 lock (_gate)
                 {
                     return _symSpell.WordCount;
@@ -43,6 +44,7 @@ namespace EverythingToolbar.FuzzySearch
         )
         {
             cancellationToken.ThrowIfCancellationRequested();
+            EnsureBuilt();
 
             var maxDistance = EditDistancePolicy.MaxDistanceFor(term.Length);
             if (maxDistance == 0)
@@ -69,6 +71,22 @@ namespace EverythingToolbar.FuzzySearch
             lock (_gate)
             {
                 _symSpell = Build(_vocabulary);
+                _built = true;
+            }
+        }
+
+        private void EnsureBuilt()
+        {
+            if (_built)
+                return;
+
+            lock (_gate)
+            {
+                if (!_built)
+                {
+                    _symSpell = Build(_vocabulary);
+                    _built = true;
+                }
             }
         }
 

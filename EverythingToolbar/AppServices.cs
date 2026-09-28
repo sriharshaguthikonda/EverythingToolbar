@@ -2,6 +2,7 @@ using System.IO;
 using CommunityToolkit.Mvvm.DependencyInjection;
 using Config.Net;
 using EverythingToolbar.Core.Platform;
+using EverythingToolbar.FuzzySearch;
 using EverythingToolbar.Search;
 using EverythingToolbar.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,20 +46,32 @@ namespace EverythingToolbar
             });
         }
 
-        public static IServiceCollection AddPlatformAdapters(this IServiceCollection services)
-        {
-            return services
-                .AddSingleton<EverythingIpcClient>()
-                .AddSingleton<EverythingPipeClient>()
-                .AddSingleton<EverythingClientRouter>()
-                .AddSingleton<IEverythingClient>(sp => sp.GetRequiredService<EverythingClientRouter>())
-                .AddSingleton<IClipboard, ClipboardAdapter>()
-                .AddSingleton<IShellDialogs, ShellDialogsAdapter>()
-                .AddSingleton<INotifier, NotifierAdapter>()
-                .AddSingleton<IFileLauncher, FileLauncherAdapter>()
-                .AddSingleton<IFilePreviewer, FilePreviewerAdapter>()
-                .AddSingleton<IAutostart, AutostartAdapter>();
-        }
+    public static IServiceCollection AddPlatformAdapters(this IServiceCollection services)
+    {
+        return services
+            .AddSingleton<EverythingIpcClient>()
+            .AddSingleton<EverythingPipeClient>()
+            .AddSingleton<EverythingClientRouter>()
+            .AddSingleton<TokenVocabulary>()
+            .AddSingleton<AliasStore>(_ =>
+                AliasStore.Load(Path.Combine(ConfigPaths.GetConfigDirectory(), "aliases.json"))
+            )
+            .AddSingleton<SymSpellCandidateProvider>()
+            .AddSingleton<FallbackQueryPlanner>(sp =>
+                new FallbackQueryPlanner(
+                    sp.GetRequiredService<AliasStore>(),
+                    sp.GetRequiredService<SymSpellCandidateProvider>()
+                )
+            )
+            .AddSingleton<TypoFallbackClient>()
+            .AddSingleton<IEverythingClient>(sp => sp.GetRequiredService<TypoFallbackClient>())
+            .AddSingleton<IClipboard, ClipboardAdapter>()
+            .AddSingleton<IShellDialogs, ShellDialogsAdapter>()
+            .AddSingleton<INotifier, NotifierAdapter>()
+            .AddSingleton<IFileLauncher, FileLauncherAdapter>()
+            .AddSingleton<IFilePreviewer, FilePreviewerAdapter>()
+            .AddSingleton<IAutostart, AutostartAdapter>();
+    }
 
         // Search domain: query state, sessions, filters, commands, and result actions.
         public static IServiceCollection AddSearchEngine(this IServiceCollection services)
