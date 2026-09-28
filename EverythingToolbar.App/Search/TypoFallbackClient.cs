@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using EverythingToolbar.Core.Data;
 using EverythingToolbar.Core.Search;
 using EverythingToolbar.FuzzySearch;
-using EverythingToolbar.Platform.Search;
 using NLog;
 
 namespace EverythingToolbar.App.Search
@@ -28,7 +27,7 @@ namespace EverythingToolbar.App.Search
         private readonly ISettings _settings;
         private readonly ConcurrentDictionary<SearchQuery, FallbackPlan?> _plans = new();
 
-        public TypoFallbackClient(EverythingClientRouter inner, FallbackQueryPlanner planner, ISettings settings)
+        public TypoFallbackClient(IEverythingClient inner, FallbackQueryPlanner planner, ISettings settings)
         {
             _inner = inner;
             _planner = planner;

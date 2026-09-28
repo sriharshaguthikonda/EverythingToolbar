@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using EverythingToolbar.App.Search;
 using EverythingToolbar.Core.Data;
 using EverythingToolbar.FuzzySearch.Tests.Support;
@@ -14,7 +15,7 @@ namespace EverythingToolbar.FuzzySearch.Tests
         }
 
         [Fact]
-        public void FetchRange_FeedsMaterializedResultsToCallback()
+        public async Task FetchRange_FeedsMaterializedResultsToCallback()
         {
             var client = new FakeEverythingClient
             {
@@ -32,7 +33,7 @@ namespace EverythingToolbar.FuzzySearch.Tests
                 results => materialized.Add(results)
             );
 
-            var page = provider.FetchRange(0, 256, isAsync: false, System.Threading.CancellationToken.None).Result;
+            var page = await provider.FetchRange(0, 256, isAsync: false, System.Threading.CancellationToken.None);
 
             Assert.Equal(2, page.Count);
             var single = Assert.Single(materialized);
@@ -43,7 +44,7 @@ namespace EverythingToolbar.FuzzySearch.Tests
         }
 
         [Fact]
-        public void FetchCount_DoesNotTriggerCallback()
+        public async Task FetchCount_DoesNotTriggerCallback()
         {
             var client = new FakeEverythingClient { CountToReturn = 5 };
             var called = false;
@@ -53,14 +54,14 @@ namespace EverythingToolbar.FuzzySearch.Tests
                 _ => called = true
             );
 
-            var count = provider.FetchCount(256, isAsync: false, System.Threading.CancellationToken.None).Result;
+            var count = await provider.FetchCount(256, isAsync: false, System.Threading.CancellationToken.None);
 
             Assert.Equal(5, count);
             Assert.False(called);
         }
 
         [Fact]
-        public void FetchRange_WorksWithoutCallback()
+        public async Task FetchRange_WorksWithoutCallback()
         {
             var client = new FakeEverythingClient { ResultsToReturn = new List<SearchResult> { Result(@"C:\a.txt") } };
             var provider = new EverythingItemsProvider(
@@ -68,7 +69,7 @@ namespace EverythingToolbar.FuzzySearch.Tests
                 new EverythingToolbar.Core.Search.SearchQuery("a", default, false, false, false, false, false)
             );
 
-            var page = provider.FetchRange(0, 256, isAsync: false, System.Threading.CancellationToken.None).Result;
+            var page = await provider.FetchRange(0, 256, isAsync: false, System.Threading.CancellationToken.None);
 
             Assert.Single(page);
         }

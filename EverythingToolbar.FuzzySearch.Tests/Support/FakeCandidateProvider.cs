@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using EverythingToolbar.FuzzySearch;
 
 namespace EverythingToolbar.FuzzySearch.Tests.Support
 {
