@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,6 +12,7 @@ namespace EverythingToolbar.App.Search
     {
         private readonly IEverythingClient _client;
         private readonly SearchQuery _query;
+        private readonly Action<IList<SearchResult>>? _onResultsMaterialized;
 
         private bool _isBusy;
         public bool IsBusy
@@ -28,10 +30,15 @@ namespace EverythingToolbar.App.Search
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        public EverythingItemsProvider(IEverythingClient client, SearchQuery query)
+        public EverythingItemsProvider(
+            IEverythingClient client,
+            SearchQuery query,
+            Action<IList<SearchResult>>? onResultsMaterialized = null
+        )
         {
             _client = client;
             _query = query;
+            _onResultsMaterialized = onResultsMaterialized;
         }
 
         public Task<int> FetchCount(int pageSize, bool isAsync, CancellationToken cancellationToken)
@@ -56,6 +63,8 @@ namespace EverythingToolbar.App.Search
                 data = _client.QueryRangeSync(_query, startIndex, pageSize, cancellationToken);
             else
                 data = await TrackBusyState(_client.QueryRangeAsync(_query, startIndex, pageSize, cancellationToken));
+
+            _onResultsMaterialized?.Invoke(data);
 
             return data;
         }

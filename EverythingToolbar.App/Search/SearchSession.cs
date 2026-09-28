@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -15,15 +15,22 @@ namespace EverythingToolbar.App.Search
         private readonly SearchState _searchState;
         private readonly IEverythingClient _everythingClient;
         private readonly ISettings _settings;
+        private readonly VocabularyRefresher _vocabularyRefresher;
 
         private VirtualizingCollection<SearchResult>? _collection;
         private bool _started;
 
-        public SearchSession(SearchState searchState, IEverythingClient everythingClient, ISettings settings)
+        public SearchSession(
+            SearchState searchState,
+            IEverythingClient everythingClient,
+            ISettings settings,
+            VocabularyRefresher vocabularyRefresher
+        )
         {
             _searchState = searchState;
             _everythingClient = everythingClient;
             _settings = settings;
+            _vocabularyRefresher = vocabularyRefresher;
 
             _searchState.PropertyChanged += OnSearchStateChanged;
         }
@@ -165,7 +172,11 @@ namespace EverythingToolbar.App.Search
                 return;
             }
 
-            var newProvider = new EverythingItemsProvider(_everythingClient, _searchState.BuildSearchQuery());
+            var newProvider = new EverythingItemsProvider(
+                _everythingClient,
+                _searchState.BuildSearchQuery(),
+                _vocabularyRefresher.OnResultsMaterialized
+            );
 
             if (_collection == null)
             {
