@@ -1,0 +1,76 @@
+# Prior-art landscape — typo-tolerant search layer on top of Everything 1.5
+# Gate record (per repo rule: 5+ implementations, 2 inspected at code level, why none reused as-is).
+# All URLs verified HTTP 200 on 2026-09-29. Discard count: 0.
+generated: 2026-09-29
+capability: typo-tolerant filename search on top of the Everything 1.5 index (raw-query-first fallback)
+
+candidates:
+  - name: EverythingToolbar (srwi)
+    url: https://github.com/srwi/EverythingToolbar
+    verified: true
+    role: BASE — reused directly, not reimplemented
+    why_relevant: Already has SDK3 pipe client (Everything3.dll), SDK2 fallback, router, settings, WPF UI.
+    reuse_decision: Fork base. Our layer plugs behind IEverythingClient; nothing here is rebuilt.
+    recheck_after: 2027-03-29
+
+  - name: Everything SDK3 (voidtools)
+    url: https://github.com/voidtools/everything_sdk3
+    verified: true
+    role: transport + index — reused (already vendored in repo as EverythingSDK3/)
+    why_relevant: Everything3_* exports incl. Everything3_IsResultListChange / Everything3_GetResults.
+    reuse_decision: Reuse via existing EverythingPipeClient. No new SDK3 client written.
+    recheck_after: 2027-03-29
+
+  - name: SymSpell (wolfgarbe)
+    url: https://github.com/wolfgarbe/SymSpell
+    alias_urls:
+      - https://github.com/softwx/symspell
+    verified: true
+    role: typo candidate engine — reused as NuGet dependency
+    why_relevant: O(1)-ish delete-based lookup, MIT, netstandard2.0, C#.
+    reuse_decision: Use NuGet package behind ITypoCandidateProvider. Not reimplemented.
+    recheck_after: 2027-03-29
+
+  - name: frizbee (saghen)
+    url: https://github.com/saghen/frizbee
+    verified: true
+    role: benchmark alternative (SIMD Levenshtein, Rust + native binding)
+    why_relevant: Faster synthetic matching than SymSpell in some benches.
+    reuse_decision: Benchmark-only candidate. Native/Rust packaging cost not justified unless local bench proves material gain. Not adopted by default.
+    recheck_after: 2027-03-29
+
+  - name: SwiftList
+    url: https://github.com/SwiftList/SwiftList
+    verified: true
+    role: C# patterns for file-dialog quick panel (phase 2)
+    why_relevant: MIT C# patterns: foreground window, docking, DPI, dismissal.
+    reuse_decision: Reference for phase 2 only. Not part of core fuzzy work.
+    recheck_after: 2027-03-29
+
+  - name: fzy (jhawthorn)
+    url: https://github.com/jhawthorn/fzy
+    verified: true
+    role: ranking prior art (SCORE_GAP_* constants, ALGORITHM.md)
+    why_relevant: Proven fuzzy ranking weights for prefix/word-boundary/subsequence tiers.
+    reuse_decision: Ideas only (constant table), C source not ported.
+    recheck_after: 2027-03-29
+
+  - name: PowerToys Run / Flow.Launcher / Wox / Listary (launcher-class fuzzy search)
+    verified: true
+    urls:
+      - https://github.com/microsoft/PowerToys
+      - https://github.com/Flow-Launcher/Flow.Launcher
+      - https://github.com/Wox-launcher/Wox
+    role: existing typo-tolerant launchers — capability competitors
+    why_not_reused: All replace or wrap the search backend with their own index/plugin pipeline; none provide a raw-query-first typo fallback that keeps Everything 1.5 SDK3 as the authoritative engine. Adopting any means abandoning EverythingToolbar's taskbar integration.
+    recheck_after: 2027-03-29
+
+inspected_at_code_level:
+  - EverythingToolbar (full audit of search flow, Platform/Search clients, SDK3 header — this repo, 2026-09-29)
+  - SymSpell (NuGet package source + license verification, commit 6)
+
+saturation_note: >
+  Vocabulary rounds: launcher fuzzy searchers (PowerToys/Flow/Wox/Listary), SymSpell-class libraries
+  (SymSpell, Fastenshtein), SIMD matchers (frizbee), Everything wrappers (EverythingToolbar, es.exe CLI,
+  Everything SDK samples). No found implementation adds typo-tolerant fallback while preserving
+  Everything as the raw-first engine. Stop rule met 2026-09-29.
