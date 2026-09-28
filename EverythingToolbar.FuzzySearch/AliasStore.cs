@@ -43,6 +43,44 @@ namespace EverythingToolbar.FuzzySearch
             }
         }
 
+        /// <summary>Grouped snapshot for display/editing.</summary>
+        public IReadOnlyList<AliasGroup> GetGroups()
+        {
+            lock (_canonicalByAlias)
+            {
+                return _canonicalByAlias
+                    .GroupBy(kvp => kvp.Value)
+                    .Select(g => new AliasGroup(g.Key, g.Select(kvp => kvp.Key).ToList()))
+                    .ToList();
+            }
+        }
+
+        /// <summary>Replaces all groups in-place (used by the settings UI after saving the file).</summary>
+        public void Reload(IEnumerable<AliasGroup> groups)
+        {
+            lock (_canonicalByAlias)
+            {
+                _canonicalByAlias.Clear();
+                foreach (var group in groups)
+                {
+                    var canonical = Normalize(group.Canonical);
+                    if (canonical.Length == 0)
+                    {
+                        continue;
+                    }
+
+                    foreach (var alias in group.Aliases)
+                    {
+                        var normalized = Normalize(alias);
+                        if (normalized.Length > 0 && normalized != canonical)
+                        {
+                            _canonicalByAlias[normalized] = canonical;
+                        }
+                    }
+                }
+            }
+        }
+
         /// <summary>Returns the canonical form when the term is a known alias; null otherwise.</summary>
         public string? TryGetCanonical(string term)
         {

@@ -50,11 +50,34 @@
           <controls:FilterSelector x:Name="FilterSelector" SelectedFilter="{Binding Source={markup:Service {x:Type appsearch:SearchState}}, Path=Filter, Mode=TwoWay}" />
 
           <Border Grid.Column="1">
-            <Button
-              Click="OpenSearchInEverything"
-              Content="{Binding Source={markup:Service {x:Type appsearch:SearchSession}}, Path=TotalCount, Converter={c:SearchResultsCountConverter}}"
-              Style="{DynamicResource TabBarButtonStyle}"
-              Visibility="{Binding Source={markup:Service {x:Type app:ISettings}}, Path=IsShowResultsCount, Converter={c:BoolToVisibilityConverter}}" />
+            <StackPanel Orientation="Horizontal">
+              <TextBlock
+                Margin="0 0 8 0"
+                VerticalAlignment="Center"
+                FontSize="11"
+                Opacity="0.7">
+                <Run Text="Showing results for: " />
+                <Run Text=" " />
+                <Run Text="{Binding Source={markup:Service {x:Type appsearch:SearchSession}}, Path=FallbackHint, Mode=OneWay}" />
+                <TextBlock.Style>
+                  <Style TargetType="TextBlock">
+                    <Setter Property="Visibility" Value="Visible" />
+                    <Style.Triggers>
+                      <DataTrigger
+                        Binding="{Binding Source={markup:Service {x:Type appsearch:SearchSession}}, Path=FallbackHint}"
+                        Value="{x:Null}">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </TextBlock.Style>
+              </TextBlock>
+              <Button
+                Click="OpenSearchInEverything"
+                Content="{Binding Source={markup:Service {x:Type appsearch:SearchSession}}, Path=TotalCount, Converter={c:SearchResultsCountConverter}}"
+                Style="{DynamicResource TabBarButtonStyle}"
+                Visibility="{Binding Source={markup:Service {x:Type app:ISettings}}, Path=IsShowResultsCount, Converter={c:BoolToVisibilityConverter}}" />
+            </StackPanel>
           </Border>
 
           <controls:SettingsControl Grid.Column="2" />

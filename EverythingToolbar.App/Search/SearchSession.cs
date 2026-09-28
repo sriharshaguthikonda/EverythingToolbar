@@ -16,21 +16,25 @@ namespace EverythingToolbar.App.Search
         private readonly IEverythingClient _everythingClient;
         private readonly ISettings _settings;
         private readonly VocabularyRefresher _vocabularyRefresher;
+        private readonly TypoFallbackClient _typoFallbackClient;
 
         private VirtualizingCollection<SearchResult>? _collection;
         private bool _started;
+        private SearchQuery _lastQuery = new("", default, false, false, false, false, false);
 
         public SearchSession(
             SearchState searchState,
             IEverythingClient everythingClient,
             ISettings settings,
-            VocabularyRefresher vocabularyRefresher
+            VocabularyRefresher vocabularyRefresher,
+            TypoFallbackClient typoFallbackClient
         )
         {
             _searchState = searchState;
             _everythingClient = everythingClient;
             _settings = settings;
             _vocabularyRefresher = vocabularyRefresher;
+            _typoFallbackClient = typoFallbackClient;
 
             _searchState.PropertyChanged += OnSearchStateChanged;
         }
@@ -42,6 +46,9 @@ namespace EverythingToolbar.App.Search
         public bool IsBusy => _collection is { IsBusy: true };
 
         public event Action? ResultsReset;
+
+        /// <summary>Corrected terms shown in the UI when a typo fallback is active; null otherwise.</summary>
+        public string? FallbackHint { get; private set; }
 
         [ObservableProperty]
         private int _selectedIndex = -1;
@@ -172,9 +179,10 @@ namespace EverythingToolbar.App.Search
                 return;
             }
 
+            _lastQuery = _searchState.BuildSearchQuery();
             var newProvider = new EverythingItemsProvider(
                 _everythingClient,
-                _searchState.BuildSearchQuery(),
+                _lastQuery,
                 _vocabularyRefresher.OnResultsMaterialized
             );
 
@@ -198,7 +206,13 @@ namespace EverythingToolbar.App.Search
                 return;
 
             TotalCount = _collection?.Count ?? 0;
+            var plan = _typoFallbackClient.GetActiveFallback(_lastQuery);
+            FallbackHint =
+                plan is null
+                    ? null
+                    : string.Join(", ", System.Linq.Enumerable.Select(plan.Corrections, c => c.Corrected));
             OnPropertyChanged(nameof(TotalCount));
+            OnPropertyChanged(nameof(FallbackHint));
             ResultsReset?.Invoke();
         }
 

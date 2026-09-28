@@ -2100,5 +2100,60 @@ namespace EverythingToolbar.Properties {
                 return ResourceManager.GetString("ColorPickerBrightness", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0}.
+        /// </summary>
+        public static string SettingsTypoTolerantSearch {
+            get {
+                return ResourceManager.GetString("SettingsTypoTolerantSearch", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0}.
+        /// </summary>
+        public static string SettingsTypoTolerantSearchHelp {
+            get {
+                return ResourceManager.GetString("SettingsTypoTolerantSearchHelp", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0}.
+        /// </summary>
+        public static string SettingsPreferredSpellings {
+            get {
+                return ResourceManager.GetString("SettingsPreferredSpellings", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0}.
+        /// </summary>
+        public static string SettingsPreferredSpellingsHelp {
+            get {
+                return ResourceManager.GetString("SettingsPreferredSpellingsHelp", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0}.
+        /// </summary>
+        public static string SettingsSave {
+            get {
+                return ResourceManager.GetString("SettingsSave", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0}.
+        /// </summary>
+        public static string ResultsShowingResultsFor {
+            get {
+                return ResourceManager.GetString("ResultsShowingResultsFor", resourceCulture);
+            }
+        }
+
     }
 }

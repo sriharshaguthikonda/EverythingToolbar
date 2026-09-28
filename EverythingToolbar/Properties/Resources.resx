@@ -798,4 +798,22 @@
   <data name="SettingsResults" xml:space="preserve">
     <value>Results</value>
   </data>
+  <data name="SettingsTypoTolerantSearch" xml:space="preserve">
+    <value>Typo-tolerant search</value>
+  </data>
+  <data name="SettingsTypoTolerantSearchHelp" xml:space="preserve">
+    <value>When a search returns no results, retry with likely spelling corrections. The original query is always kept as an alternative.</value>
+  </data>
+  <data name="SettingsPreferredSpellings" xml:space="preserve">
+    <value>Preferred spellings</value>
+  </data>
+  <data name="SettingsPreferredSpellingsHelp" xml:space="preserve">
+    <value>One rule per line: canonical = alias1, alias2. Example: repomaps = repo map, repo-map</value>
+  </data>
+  <data name="SettingsSave" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="ResultsShowingResultsFor" xml:space="preserve">
+    <value>Showing results for</value>
+  </data>
 </root>

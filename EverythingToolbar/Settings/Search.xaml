@@ -55,6 +55,39 @@
         BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
         BorderThickness="1 1 1 0"
         CornerRadius="0">
+        <controls:SettingItem Title="{x:Static properties:Resources.SettingsTypoTolerantSearch}" HelpText="{x:Static properties:Resources.SettingsTypoTolerantSearchHelp}">
+          <controls:SettingItem.SettingContent>
+            <ui:ToggleSwitch IsChecked="{Binding Settings.IsTypoTolerantSearchEnabled, Mode=TwoWay}" />
+          </controls:SettingItem.SettingContent>
+        </controls:SettingItem>
+      </Border>
+      <Border
+        Padding="16"
+        Background="{ui:ThemeResource CardBackgroundFillColorDefaultBrush}"
+        BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
+        BorderThickness="1 1 1 0"
+        CornerRadius="0">
+        <StackPanel>
+          <controls:SettingItem Title="{x:Static properties:Resources.SettingsPreferredSpellings}" HelpText="{x:Static properties:Resources.SettingsPreferredSpellingsHelp}">
+            <controls:SettingItem.SettingContent>
+              <Button Click="OnSaveAliasesClicked" Content="{x:Static properties:Resources.SettingsSave}" />
+            </controls:SettingItem.SettingContent>
+          </controls:SettingItem>
+          <ui:TextBox
+            x:Name="AliasesTextBox"
+            MinHeight="96"
+            AcceptsReturn="True"
+            PlaceholderText="{x:Static properties:Resources.SettingsPreferredSpellingsHelp}"
+            TextWrapping="NoWrap"
+            VerticalScrollBarVisibility="Auto" />
+        </StackPanel>
+      </Border>
+      <Border
+        Padding="16"
+        Background="{ui:ThemeResource CardBackgroundFillColorDefaultBrush}"
+        BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
+        BorderThickness="1 1 1 0"
+        CornerRadius="0">
         <controls:SettingItem Title="{x:Static properties:Resources.SettingsSelectFirstResult}" HelpText="{x:Static properties:Resources.SettingsSelectFirstResultHelp}">
           <controls:SettingItem.SettingContent>
             <ui:ToggleSwitch IsChecked="{Binding Settings.IsAutoSelectFirstResult, Mode=TwoWay}" />
