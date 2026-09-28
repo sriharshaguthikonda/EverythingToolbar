@@ -78,35 +78,42 @@ namespace EverythingToolbar.FuzzySearch
 
         private List<string> CollectAlternatives(string term, CancellationToken cancellationToken)
         {
-            var alternatives = new List<string>();
+            var entries = new List<(string Correction, bool IsAlias, int Distance, long Frequency)>();
 
-            void AddIfValid(string? candidate)
+            void AddIfValid(string? correction, bool isAlias, int distance, long frequency)
             {
                 if (
-                    string.IsNullOrEmpty(candidate)
-                    || candidate.IndexOf(' ') >= 0
-                    || candidate.Equals(term, StringComparison.OrdinalIgnoreCase)
-                    || alternatives.Contains(candidate, StringComparer.OrdinalIgnoreCase)
+                    string.IsNullOrEmpty(correction)
+                    || correction.IndexOf(' ') >= 0
+                    || correction.Equals(term, StringComparison.OrdinalIgnoreCase)
+                    || entries.Exists(e => e.Correction.Equals(correction, StringComparison.OrdinalIgnoreCase))
                 )
                 {
                     return;
                 }
 
-                alternatives.Add(candidate);
+                entries.Add((correction, isAlias, distance, frequency));
             }
 
             // Explicit preferred spellings rank above inferred typo candidates.
-            AddIfValid(_aliases?.TryGetCanonical(term));
+            AddIfValid(_aliases?.TryGetCanonical(term), isAlias: true, distance: 0, frequency: long.MaxValue);
 
             if (_candidates is not null)
             {
                 foreach (var candidate in _candidates.FindCandidates(term, MaxAlternativesPerTerm, cancellationToken))
                 {
-                    AddIfValid(candidate.Correction);
+                    AddIfValid(candidate.Correction, isAlias: false, candidate.EditDistance, candidate.Frequency);
                 }
             }
 
-            return alternatives;
+            return entries
+                .OrderBy(e => e.IsAlias ? 0 : 1)
+                .ThenBy(e => e.Distance)
+                .ThenByDescending(e => e.Frequency)
+                .ThenBy(e => e.Correction, StringComparer.OrdinalIgnoreCase)
+                .Take(MaxAlternativesPerTerm)
+                .Select(e => e.Correction)
+                .ToList();
         }
     }
 }

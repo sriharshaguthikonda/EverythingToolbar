@@ -113,7 +113,7 @@ namespace EverythingToolbar.FuzzySearch.Tests
         }
 
         [Fact]
-        public void Plan_KeepsCandidateOrderFromProvider()
+        public void Plan_PreservesDistanceOrderingFromProvider()
         {
             var provider = new FakeCandidateProvider(
                 new Dictionary<string, IReadOnlyList<TypoCandidate>>
@@ -127,6 +127,48 @@ namespace EverythingToolbar.FuzzySearch.Tests
 
             Assert.NotNull(plan);
             Assert.Equal("<docuemnt|document|documents>", plan!.CorrectedQuery);
+        }
+
+        [Fact]
+        public void Plan_OrdersByDistanceBeforeFrequency()
+        {
+            var provider = new FakeCandidateProvider(
+                new Dictionary<string, IReadOnlyList<TypoCandidate>>
+                {
+                    ["attachement"] = new[]
+                    {
+                        new TypoCandidate("attachable", 2, 100),
+                        new TypoCandidate("attachment", 1, 1),
+                    },
+                }
+            );
+            var planner = new FallbackQueryPlanner(candidates: provider);
+
+            var plan = planner.Plan("attachement");
+
+            Assert.NotNull(plan);
+            Assert.Equal("<attachement|attachment|attachable>", plan!.CorrectedQuery);
+        }
+
+        [Fact]
+        public void Plan_TiesBreakByFrequencyThenName()
+        {
+            var provider = new FakeCandidateProvider(
+                new Dictionary<string, IReadOnlyList<TypoCandidate>>
+                {
+                    ["attachement"] = new[]
+                    {
+                        new TypoCandidate("attache", 2, 5),
+                        new TypoCandidate("attachments", 2, 9),
+                    },
+                }
+            );
+            var planner = new FallbackQueryPlanner(candidates: provider);
+
+            var plan = planner.Plan("attachement");
+
+            Assert.NotNull(plan);
+            Assert.Equal("<attachement|attachments|attache>", plan!.CorrectedQuery);
         }
 
         [Fact]
