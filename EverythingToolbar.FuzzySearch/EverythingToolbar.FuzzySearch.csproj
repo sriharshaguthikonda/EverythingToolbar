@@ -4,4 +4,7 @@
     <RootNamespace>EverythingToolbar.FuzzySearch</RootNamespace>
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="SymSpell" />
+  </ItemGroup>
 </Project>

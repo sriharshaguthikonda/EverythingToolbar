@@ -11,6 +11,7 @@
     <PackageVersion Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.161" />
     <PackageVersion Include="NHotkey.Wpf" Version="4.0.0" />
     <PackageVersion Include="NLog" Version="5.5.1" />
+    <PackageVersion Include="SymSpell" Version="6.7.3" />
     <PackageVersion Include="NativeTray" Version="2.2.3" />
     <PackageVersion Include="WPF-UI" Version="4.0.3" />
     <PackageVersion Include="xunit" Version="2.9.2" />
