@@ -6,6 +6,10 @@ prior-art record: `docs/Research/landscape.yaml`.
 
 ## How it works
 
+Spelling correction uses a **Damerau-Levenshtein (optimal string alignment)** distance as
+implemented by SymSpell - adjacent transpositions (`docuemnt` -> `document`) are single edits,
+and the required `repomsp` -> `repomaps` case is a two-edit correction at length 7.
+
 1. Your query runs in Everything exactly as typed. If it matches anything, nothing changes.
 2. Only on zero results: terms that are plain filename words (no `:`, wildcards, quotes, paths,
    operators, negations; >= 4 chars) are looked up in a SymSpell index built from a filename-token
@@ -35,6 +39,27 @@ SymSpell's closest-match verbosity plus the zero-result gate keeping precision. 
   aliases expand into the OR group next to the raw term. Multi-word canonicals apply only as
   whole-query aliases.
 
+## First-run bootstrap, cache and readiness
+
+- On first start with no usable cache (typo search enabled), bootstrap begins **immediately**
+  off the UI thread: the Everything index is paged through `IEverythingClient` with a uniform
+  stride across the whole index (150,000-path budget), tokenized, and the SymSpell index built.
+  No 2-minute dead period; no dependence on a lucky random sample.
+- The vocabulary persists to `%APPDATA%\EverythingToolbar\spelling-vocabulary-<instance>-v1.json`:
+  schema-versioned JSON of token/compound frequencies and display casing only (no paths, not a
+  filesystem index), keyed by Everything instance, written atomically (tmp + move). Corrupt,
+  incompatible or foreign-instance caches are ignored and rebuilt.
+- Later startups load the cache (sub-second time-to-Ready) and refresh in the background
+  (6 h timer + learning from every result page the UI materializes; background SymSpell rebuild
+  every 2,000 learned paths). Rebuilds build a fresh index outside the lookup lock and swap it
+  in atomically - lookups never wait for a rebuild.
+- Candidate-plan caches are version-gated to the index (`ITypoCandidateProvider.IndexVersion`):
+  a zero-result query made before the vocabulary was ready works on the next identical query
+  after readiness.
+- Settings > Search shows live readiness: `Building... / Ready - N spelling terms / Refreshing...
+  / unavailable / disabled`, plus a coalesced, non-blocking **Refresh spelling vocabulary now**
+  button. The single `IsTypoTolerantSearchEnabled` toggle is unchanged.
+
 ## Vocabulary (Everything-native, no second index)
 
 Word+frequency list only — no path database, no filesystem watcher, no crawler.
@@ -43,6 +68,27 @@ pages at random offsets straight from the Everything index (startup + every 6 h)
 index rebuilds lazily on first use and in the background every 2000 learned paths.
 Everything3 result-list change tracking was evaluated and deliberately not used: per-query result
 lists here are ephemeral, so a cheap periodic refresh is the lower-risk route.
+
+## Measured performance (FUZZY_BENCH=1, deterministic seeds; Damerau-Levenshtein via SymSpell)
+
+| Benchmark | Result |
+|---|---|
+| vocab build 10k / 50k / 100k paths | 28 / 178 / 287 ms |
+| index rebuild 10k / 50k / 100k words | 108 / 529 / 1961 ms (background, non-blocking swap) |
+| candidate lookup p50 across sizes & typo shapes | 0.003 - 0.015 ms |
+| candidate lookup p95 (worst shape/size) | 0.061 ms (100k, deletion) |
+| required typo cases @100k vocab | all found, p50 0.002-0.005 ms |
+| planner (classify+lookup+plan, mixed query) | p50 0.010 ms, p95 0.013 ms |
+| fast-path overhead (decorated vs raw, exact query) | ~0 us (indistinguishable at 1 us scale) |
+| zero-result correction path through decorator (20k fake index) | p50 5.7 ms, p95 8.5 ms, p99 10.4 ms |
+| cold bootstrap 50k paths (fake client) | 2.4 s to Ready |
+| cache save / load / restore+index build | 157 ms (7.7 MB) / 432 ms / 1.7 s |
+| subsequent-startup time-to-Ready (50k-word cache) | 334 ms |
+| working set after 100k-word build | ~411 MB (test host incl. corpora) |
+
+Live-Everything benchmark (BenchmarkF) and the live integration test are env-gated
+(`LIVE_EVERYTHING=1`) and report BLOCKED with exact evidence when the SDK3 pipe is unreachable
+(e.g. non-elevated process vs elevated Everything); no synthetic substitute is used.
 
 ## Measured performance (this machine, synthetic 50k-word vocabulary)
 
