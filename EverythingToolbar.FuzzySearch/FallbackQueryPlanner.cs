@@ -32,6 +32,9 @@ namespace EverythingToolbar.FuzzySearch
             _candidates = candidates;
         }
 
+        /// <summary>Version of the underlying candidate index; changes invalidate plan caches.</summary>
+        public int IndexVersion => _candidates?.IndexVersion ?? 0;
+
         public FallbackPlan? Plan(string rawQuery, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(rawQuery))

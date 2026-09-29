@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using EverythingToolbar.App.Search;
 using EverythingToolbar.Core.Data;
 using EverythingToolbar.Core.Search;
-using EverythingToolbar.FuzzySearch;
 using EverythingToolbar.FuzzySearch.Tests.Support;
 using Xunit;
 

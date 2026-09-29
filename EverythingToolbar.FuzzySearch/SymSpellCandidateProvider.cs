@@ -19,11 +19,14 @@ namespace EverythingToolbar.FuzzySearch
         private readonly object _gate = new();
         private SymSpell _symSpell = new(SymSpellInitialCapacity, MaxDictionaryEditDistance, PrefixLength);
         private bool _built;
+        private int _indexVersion;
 
         public SymSpellCandidateProvider(TokenVocabulary vocabulary)
         {
             _vocabulary = vocabulary;
         }
+
+        public int IndexVersion => Volatile.Read(ref _indexVersion);
 
         public int EntryCount
         {
@@ -72,6 +75,7 @@ namespace EverythingToolbar.FuzzySearch
             {
                 _symSpell = Build(_vocabulary);
                 _built = true;
+                _indexVersion++;
             }
         }
 
@@ -86,6 +90,7 @@ namespace EverythingToolbar.FuzzySearch
                 {
                     _symSpell = Build(_vocabulary);
                     _built = true;
+                    _indexVersion++;
                 }
             }
         }
