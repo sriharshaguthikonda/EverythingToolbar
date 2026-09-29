@@ -27,6 +27,8 @@ jobs:
       arch: ${{ matrix.arch }}
       installer: ${{ matrix.installer }}
       sign: false
-      # Only keep the installer when the build was triggered manually.
-      upload_artifact: ${{ github.event_name == 'workflow_dispatch' }}
-      artifact_name: EverythingToolbar-Installer-${{ matrix.arch }}
+      run_tests: true
+      installer_basename: EverythingToolbar-${{ matrix.arch }}-${{ github.sha }}
+      # Keep the installer artifact for main pushes and manual runs (PRs build/test only).
+      upload_artifact: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
+      artifact_name: EverythingToolbar-Installer-${{ matrix.arch }}-${{ github.sha }}

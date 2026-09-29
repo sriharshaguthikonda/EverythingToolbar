@@ -40,6 +40,11 @@ on:
         required: false
         type: string
         default: ''
+      run_tests:
+        description: 'Run the automated test suite after the build'
+        required: false
+        type: boolean
+        default: false
     secrets:
       PFX_CERTIFICATE_FILE:
         description: 'Base64-encoded strong-name key, required when sign is true'
@@ -76,6 +81,16 @@ jobs:
 
       - name: Build all
         run: MSBuild $Env:GITHUB_WORKSPACE /p:Configuration=Release /p:Platform=${{ inputs.arch }} /p:SignAssembly=${{ inputs.sign }} /warnaserror:IDE0005,IDE0051,IDE0052,IDE0035,IDE0059,IDE0161,IDE1006,nullable
+
+      # dotnet test builds the managed chain itself; FuzzyManagedOnlyBuild=true reuses the native
+      # SDK DLLs produced by the MSBuild step above (the dotnet CLI cannot evaluate the .vcxproj
+      # references). The live Everything test is env-gated and skips here; see docs.
+      - name: Run tests
+        if: ${{ inputs.run_tests }}
+        run: >-
+          dotnet test EverythingToolbar.FuzzySearch.Tests/EverythingToolbar.FuzzySearch.Tests.csproj
+          -p:Configuration=Release -p:Platform=${{ inputs.arch }} -p:SignAssembly=false
+          -p:FuzzyManagedOnlyBuild=true
 
       - name: Install Inno Setup
         run: choco install innosetup -y --version 6.7.1 --allow-downgrade
