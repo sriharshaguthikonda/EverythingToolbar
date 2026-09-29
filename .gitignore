@@ -262,3 +262,6 @@ __pycache__/
 *.pyc
 
 HeatGeneratedFileList.wxs
+
+# Installer build output
+Installer/output/
