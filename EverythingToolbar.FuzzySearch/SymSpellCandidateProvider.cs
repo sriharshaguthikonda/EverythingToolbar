@@ -68,12 +68,17 @@ namespace EverythingToolbar.FuzzySearch
                 .ToList();
         }
 
-        /// <summary>Rebuilds the index from the current vocabulary state (e.g. after a refresh).</summary>
+        /// <summary>
+        /// Rebuilds the index from the current vocabulary state (e.g. after a refresh). The new
+        /// index is built from a vocabulary snapshot OUTSIDE the lookup lock; only the reference
+        /// swap is locked, so candidate lookups never wait for a rebuild.
+        /// </summary>
         public void Rebuild()
         {
+            var replacement = Build(_vocabulary);
             lock (_gate)
             {
-                _symSpell = Build(_vocabulary);
+                _symSpell = replacement;
                 _built = true;
                 _indexVersion++;
             }
@@ -84,11 +89,12 @@ namespace EverythingToolbar.FuzzySearch
             if (_built)
                 return;
 
+            var replacement = Build(_vocabulary);
             lock (_gate)
             {
                 if (!_built)
                 {
-                    _symSpell = Build(_vocabulary);
+                    _symSpell = replacement;
                     _built = true;
                     _indexVersion++;
                 }
