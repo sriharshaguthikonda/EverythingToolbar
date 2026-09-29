@@ -163,9 +163,20 @@ begin
   Result := RegKeyExists(HKCR, 'CLSID\{9D39B79C-E03C-4757-B1B6-ECCE843748F3}');
 end;
 
+function IsDeskbandServerPresent: Boolean;
+var
+  sServer: String;
+begin
+  // A stale CLSID registration (e.g. from a removed StartAllBack-era install) must not
+  // silently force Deskband mode on upgrade; require the COM server DLL to actually exist.
+  Result :=
+    RegQueryStringValue(HKCR, 'CLSID\{9D39B79C-E03C-4757-B1B6-ECCE843748F3}\InProcServer32', '', sServer) and
+    FileExists(sServer);
+end;
+
 function SetSelectedModeFromPrevious: Boolean;
 begin
-  if IsDeskbandInstalled then
+  if IsDeskbandInstalled and IsDeskbandServerPresent then
     SelectedInstallMode := 1
   else
     SelectedInstallMode := 0;
@@ -176,7 +187,7 @@ end;
 function InitializeUninstall: Boolean;
 begin
   KillAppIfRunning;
-  if IsDeskbandInstalled then
+  if IsDeskbandInstalled and IsDeskbandServerPresent then
     KillExplorerForDeskband;
   Result := True;
 end;
