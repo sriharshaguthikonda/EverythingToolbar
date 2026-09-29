@@ -58,6 +58,40 @@ Frizbee (SIMD Rust matcher) was benchmarked as an alternative and not adopted: S
 answers two orders of magnitude under target, so native packaging, build complexity and arch
 matrix bring no material benefit. Harness: `FUZZY_BENCH=1 dotnet test --filter Category=Benchmark`.
 
+## CI / installer (this fork)
+
+Canonical repo: `sriharshaguthikonda/EverythingToolbar`, default branch `main`
+(upstream `srwi/EverythingToolbar` stays as the `upstream` remote; never force-pushed).
+
+GitHub Actions (`build.yml` -> `_build.yml`) on every push/PR/dispatch:
+
+1. NuGet restore + full MSBuild Release build per arch (x64 + ARM64) — the hosted
+   `windows-2025`/`windows-11-arm` runners carry a Roslyn new enough for CsWin32 0.3.335, so
+   `EverythingToolbar.Platform` compiles normally and `FuzzyManagedOnlyBuild` stays a
+   local-dev-only escape hatch.
+2. `EverythingToolbar.FuzzySearch.Tests` runs via `dotnet test -p:FuzzyManagedOnlyBuild=true`
+   (reuses the MSBuild-built native DLLs); failures fail the run. The live Everything test is
+   env-gated and skips in CI — run it on a machine with Everything 1.5a (see below).
+3. On `main` pushes and manual dispatches the Inno Setup x64/ARM64 installers compile and upload
+   as artifacts named `EverythingToolbar-Installer-<arch>-<full-commit-sha>`; the exe inside is
+   `EverythingToolbar-<arch>-<full-commit-sha>.exe` (traceable to the exact commit).
+4. Release workflow unchanged: tagged builds sign via the `PFX_CERTIFICATE_FILE` secret; a fork
+   without that secret simply skips signing (`sign: false` path) and never fails main CI.
+
+Installer defaults to **Launcher** mode on Windows 11. On upgrades the deskband auto-resume now
+requires the deskband COM server DLL to actually exist at its registered path — a stale CLSID
+registration from a removed StartAllBack-era install can no longer silently pick Deskband
+(`/mode=launcher` also forces Launcher explicitly).
+
+## Upstream sync flow
+
+```bash
+git fetch upstream
+git log --oneline main..upstream/develop   # review deliberately
+git checkout main && git merge upstream/develop   # or cherry-pick; keep typo-search changes
+git push origin main                        # CI re-validates everything
+```
+
 ## Build & test
 
 ```powershell
