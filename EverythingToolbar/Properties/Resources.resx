@@ -816,4 +816,22 @@
   <data name="ResultsShowingResultsFor" xml:space="preserve">
     <value>Showing results for</value>
   </data>
+  <data name="SettingsVocabStateBuilding" xml:space="preserve">
+    <value>Building spelling vocabulary…</value>
+  </data>
+  <data name="SettingsVocabStateReadyFormat" xml:space="preserve">
+    <value>Ready — {0} spelling terms</value>
+  </data>
+  <data name="SettingsVocabStateDisabled" xml:space="preserve">
+    <value>Typo-tolerant search is disabled</value>
+  </data>
+  <data name="SettingsVocabStateRefreshing" xml:space="preserve">
+    <value>Refreshing spelling vocabulary…</value>
+  </data>
+  <data name="SettingsVocabStateFailed" xml:space="preserve">
+    <value>Spelling vocabulary unavailable — will retry</value>
+  </data>
+  <data name="SettingsVocabRefreshNow" xml:space="preserve">
+    <value>Refresh spelling vocabulary now</value>
+  </data>
 </root>

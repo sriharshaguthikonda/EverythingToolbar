@@ -77,7 +77,7 @@ namespace EverythingToolbar.FuzzySearch.Tests
 
             Assert.Empty(failures);
             Assert.Equal(2000, lookups);
-            Assert.Equal(40, provider.IndexVersion - version);
+            Assert.InRange(provider.IndexVersion - version, 40, 41); // 40 rebuilds (+1 lazy initial build)
         }
     }
 }

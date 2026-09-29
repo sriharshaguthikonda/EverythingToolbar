@@ -2155,5 +2155,60 @@ namespace EverythingToolbar.Properties {
             }
         }
 
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0}.
+        /// </summary>
+        public static string SettingsVocabStateBuilding {
+            get {
+                return ResourceManager.GetString("SettingsVocabStateBuilding", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0}.
+        /// </summary>
+        public static string SettingsVocabStateReadyFormat {
+            get {
+                return ResourceManager.GetString("SettingsVocabStateReadyFormat", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0}.
+        /// </summary>
+        public static string SettingsVocabStateDisabled {
+            get {
+                return ResourceManager.GetString("SettingsVocabStateDisabled", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0}.
+        /// </summary>
+        public static string SettingsVocabStateRefreshing {
+            get {
+                return ResourceManager.GetString("SettingsVocabStateRefreshing", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0}.
+        /// </summary>
+        public static string SettingsVocabStateFailed {
+            get {
+                return ResourceManager.GetString("SettingsVocabStateFailed", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0}.
+        /// </summary>
+        public static string SettingsVocabRefreshNow {
+            get {
+                return ResourceManager.GetString("SettingsVocabRefreshNow", resourceCulture);
+            }
+        }
+
     }
 }

@@ -55,11 +55,23 @@
         BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
         BorderThickness="1 1 1 0"
         CornerRadius="0">
-        <controls:SettingItem Title="{x:Static properties:Resources.SettingsTypoTolerantSearch}" HelpText="{x:Static properties:Resources.SettingsTypoTolerantSearchHelp}">
-          <controls:SettingItem.SettingContent>
-            <ui:ToggleSwitch IsChecked="{Binding Settings.IsTypoTolerantSearchEnabled, Mode=TwoWay}" />
-          </controls:SettingItem.SettingContent>
-        </controls:SettingItem>
+        <StackPanel>
+          <controls:SettingItem Title="{x:Static properties:Resources.SettingsTypoTolerantSearch}" HelpText="{x:Static properties:Resources.SettingsTypoTolerantSearchHelp}">
+            <controls:SettingItem.SettingContent>
+              <ui:ToggleSwitch IsChecked="{Binding Settings.IsTypoTolerantSearchEnabled, Mode=TwoWay}" />
+            </controls:SettingItem.SettingContent>
+          </controls:SettingItem>
+          <TextBlock
+            Margin="0 8 0 0"
+            FontSize="12"
+            Opacity="0.8"
+            Text="{Binding VocabularyStatusText}" />
+          <Button
+            Margin="0 8 0 0"
+            HorizontalAlignment="Left"
+            Click="OnRefreshVocabularyClicked"
+            Content="{x:Static properties:Resources.SettingsVocabRefreshNow}" />
+        </StackPanel>
       </Border>
       <Border
         Padding="16"
