@@ -60,9 +60,7 @@ namespace EverythingToolbar.Settings
 
         private void OnVocabularyStateChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName
-                is nameof(VocabularyRefresher.State)
-                    or nameof(VocabularyRefresher.WordCount))
+            if (e.PropertyName is nameof(VocabularyRefresher.State) or nameof(VocabularyRefresher.WordCount))
             {
                 UpdateVocabularyStatus();
             }

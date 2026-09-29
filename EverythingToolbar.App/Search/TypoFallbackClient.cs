@@ -156,11 +156,12 @@ namespace EverythingToolbar.App.Search
 
         private SearchQuery Resolve(SearchQuery rawQuery)
         {
-            return _plans.TryGetValue(rawQuery, out var entry)
+            return
+                _plans.TryGetValue(rawQuery, out var entry)
                 && entry.Plan is not null
                 && entry.IndexVersion == _planner.IndexVersion
-                    ? WithCorrectedText(rawQuery, entry.Plan)
-                    : rawQuery;
+                ? WithCorrectedText(rawQuery, entry.Plan)
+                : rawQuery;
         }
 
         private static SearchQuery WithCorrectedText(SearchQuery query, FallbackPlan plan)

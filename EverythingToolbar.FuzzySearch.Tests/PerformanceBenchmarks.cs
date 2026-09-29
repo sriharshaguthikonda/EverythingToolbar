@@ -8,9 +8,9 @@ using System.Threading.Tasks;
 using EverythingToolbar.App.Search;
 using EverythingToolbar.Core.Data;
 using EverythingToolbar.Core.Search;
-using EverythingToolbar.Platform.Search;
 using EverythingToolbar.FuzzySearch;
 using EverythingToolbar.FuzzySearch.Tests.Support;
+using EverythingToolbar.Platform.Search;
 using Xunit;
 using Xunit.Abstractions;
 
