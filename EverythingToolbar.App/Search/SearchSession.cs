@@ -207,10 +207,9 @@ namespace EverythingToolbar.App.Search
 
             TotalCount = _collection?.Count ?? 0;
             var plan = _typoFallbackClient.GetActiveFallback(_lastQuery);
-            FallbackHint =
-                plan is null
-                    ? null
-                    : string.Join(", ", System.Linq.Enumerable.Select(plan.Corrections, c => c.Corrected));
+            FallbackHint = plan is null
+                ? null
+                : string.Join(", ", System.Linq.Enumerable.Select(plan.Corrections, c => c.Corrected));
             OnPropertyChanged(nameof(TotalCount));
             OnPropertyChanged(nameof(FallbackHint));
             ResultsReset?.Invoke();

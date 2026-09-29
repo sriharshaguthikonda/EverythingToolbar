@@ -62,13 +62,11 @@ namespace EverythingToolbar
                     sp.GetRequiredService<AliasStore>(),
                     sp.GetRequiredService<SymSpellCandidateProvider>()
                 ))
-                .AddSingleton<TypoFallbackClient>(sp =>
-                new TypoFallbackClient(
+                .AddSingleton<TypoFallbackClient>(sp => new TypoFallbackClient(
                     sp.GetRequiredService<EverythingClientRouter>(),
                     sp.GetRequiredService<FallbackQueryPlanner>(),
                     sp.GetRequiredService<ISettings>()
-                )
-            )
+                ))
                 .AddSingleton<VocabularyRefresher>()
                 .AddSingleton<IEverythingClient>(sp => sp.GetRequiredService<TypoFallbackClient>())
                 .AddSingleton<IClipboard, ClipboardAdapter>()

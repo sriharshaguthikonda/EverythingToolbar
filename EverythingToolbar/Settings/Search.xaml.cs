@@ -14,10 +14,7 @@ namespace EverythingToolbar.Settings
     [ObservableObject]
     public partial class Search
     {
-        private static readonly string AliasesPath = Path.Combine(
-            ConfigPaths.GetConfigDirectory(),
-            "aliases.json"
-        );
+        private static readonly string AliasesPath = Path.Combine(ConfigPaths.GetConfigDirectory(), "aliases.json");
 
         public ISettings Settings { get; } = Ioc.Default.GetRequiredService<ISettings>();
         private readonly SearchState _searchState = Ioc.Default.GetRequiredService<SearchState>();
