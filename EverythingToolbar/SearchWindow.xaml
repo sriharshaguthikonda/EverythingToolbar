@@ -63,9 +63,7 @@
                   <Style TargetType="TextBlock">
                     <Setter Property="Visibility" Value="Visible" />
                     <Style.Triggers>
-                      <DataTrigger
-                        Binding="{Binding Source={markup:Service {x:Type appsearch:SearchSession}}, Path=FallbackHint}"
-                        Value="{x:Null}">
+                      <DataTrigger Binding="{Binding Source={markup:Service {x:Type appsearch:SearchSession}}, Path=FallbackHint}" Value="{x:Null}">
                         <Setter Property="Visibility" Value="Collapsed" />
                       </DataTrigger>
                     </Style.Triggers>
