@@ -130,7 +130,7 @@ namespace EverythingToolbar.FuzzySearch.Tests
 
         [Theory]
         [MemberData(nameof(DistanceThreeLongWordCorpus))]
-        public void Corpus_DefaultPolicy_LeavesDistanceThreeTyposUnresolved(
+        public void Corpus_DefaultPolicy_CorrectsDistanceThreeLongWords(
             string typo,
             string correction,
             int[] deletedIndices
@@ -143,10 +143,10 @@ namespace EverythingToolbar.FuzzySearch.Tests
 
             var provider = new SymSpellCandidateProvider(BuildVocabulary());
 
-            Assert.DoesNotContain(
-                provider.FindCandidates(typo, 5, CancellationToken.None),
-                c => c.Correction.Equals(correction, StringComparison.OrdinalIgnoreCase)
-            );
+            var candidates = provider.FindCandidates(typo, 5, CancellationToken.None);
+
+            Assert.NotEmpty(candidates);
+            Assert.Equal(correction, candidates[0].Correction, ignoreCase: true);
         }
 
         [Fact]
@@ -198,11 +198,14 @@ namespace EverythingToolbar.FuzzySearch.Tests
         }
 
         [Fact]
-        public void Planner_DefaultPolicy_ReturnsNoPlanForDistanceThreeTypo()
+        public void Planner_DefaultPolicy_ProposesCorrectionForDistanceThreeTypo()
         {
             var planner = new FallbackQueryPlanner(AliasStore.Empty, new SymSpellCandidateProvider(BuildVocabulary()));
 
-            Assert.Null(planner.Plan("neurosccien"));
+            var plan = planner.Plan("neurosccien");
+
+            Assert.NotNull(plan);
+            Assert.Contains("neuroscience", plan!.CorrectedQuery);
         }
     }
 }

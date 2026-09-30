@@ -108,7 +108,8 @@ namespace EverythingToolbar.FuzzySearch.Tests
             Assert.Equal(2, EditDistancePolicy.Default.MaxDistanceFor(4));
             Assert.Equal(2, EditDistancePolicy.Default.MaxDistanceFor(7));
             Assert.Equal(2, EditDistancePolicy.Default.MaxDistanceFor(8));
-            Assert.Equal(2, EditDistancePolicy.Default.MaxDistanceFor(20));
+            Assert.Equal(3, EditDistancePolicy.Default.MaxDistanceFor(9));
+            Assert.Equal(3, EditDistancePolicy.Default.MaxDistanceFor(20));
         }
 
         [Fact]
@@ -153,17 +154,20 @@ namespace EverythingToolbar.FuzzySearch.Tests
         }
 
         [Fact]
-        public void FindCandidates_DefaultPolicy_LeavesThreeEditTyposUnresolved()
+        public void FindCandidates_DefaultPolicy_CorrectsThreeEditLongWord()
         {
             var provider = new SymSpellCandidateProvider(BuildVocabulary());
 
-            Assert.Empty(provider.FindCandidates("neurosccien", 5, CancellationToken.None));
+            var candidates = provider.FindCandidates("neurosccien", 5, CancellationToken.None);
+
+            Assert.NotEmpty(candidates);
+            Assert.Equal("neuroscience", candidates[0].Correction, ignoreCase: true);
         }
 
         [Fact]
         public void Rebuild_WithNewPolicy_AppliesItAndBumpsIndexVersion()
         {
-            var provider = new SymSpellCandidateProvider(BuildVocabulary());
+            var provider = new SymSpellCandidateProvider(BuildVocabulary(), new EditDistancePolicy(2, 2, 9));
             Assert.Empty(provider.FindCandidates("neurosccien", 5, CancellationToken.None));
             var versionBefore = provider.IndexVersion;
 

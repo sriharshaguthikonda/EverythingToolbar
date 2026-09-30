@@ -65,6 +65,8 @@ namespace EverythingToolbar.FuzzySearch.Tests
         private static readonly (string Typo, string Correction)[] RequiredCases =
         {
             ("neurosicence", "neuroscience"),
+            ("neurosccience", "neuroscience"),
+            ("neurosccien", "neuroscience"),
             ("docuemnt", "document"),
             ("attachement", "attachment"),
             ("repomsp", "repomaps"),
@@ -197,7 +199,9 @@ namespace EverythingToolbar.FuzzySearch.Tests
                 var cold = Stopwatch.StartNew();
                 provider.FindCandidates("neurosicence", 3, CancellationToken.None);
                 cold.Stop();
-                _output.WriteLine($"[A] size={size} dict={provider.Policy.MaxDictionaryEditDistance}: coldFirstLookup={cold.Elapsed.TotalMilliseconds:F3} ms");
+                _output.WriteLine(
+                    $"[A] size={size} dict={provider.Policy.MaxDictionaryEditDistance}: coldFirstLookup={cold.Elapsed.TotalMilliseconds:F3} ms"
+                );
 
                 var random = new Random(size);
                 foreach (
@@ -229,7 +233,10 @@ namespace EverythingToolbar.FuzzySearch.Tests
                         probes.Count,
                         25
                     );
-                    Report($"[A] size={size} dict={provider.Policy.MaxDictionaryEditDistance} shape={shapeName}", latencies);
+                    Report(
+                        $"[A] size={size} dict={provider.Policy.MaxDictionaryEditDistance} shape={shapeName}",
+                        latencies
+                    );
                 }
             }
         }
@@ -258,7 +265,10 @@ namespace EverythingToolbar.FuzzySearch.Tests
                 var found = provider
                     .FindCandidates(typo, 5, CancellationToken.None)
                     .Any(c => c.Correction.Equals(correction, StringComparison.OrdinalIgnoreCase));
-                Report($"[A] dict={provider.Policy.MaxDictionaryEditDistance} case={typo}->{correction} found={found}", latencies);
+                Report(
+                    $"[A] dict={provider.Policy.MaxDictionaryEditDistance} case={typo}->{correction} found={found}",
+                    latencies
+                );
             }
         }
 
@@ -317,7 +327,10 @@ namespace EverythingToolbar.FuzzySearch.Tests
             var decorated = Latencies(() => decorator.QueryCountSync(query, 256, CancellationToken.None), 2000, 100);
 
             Report("[C] raw IEverythingClient exact-count", raw);
-            Report($"[C] dict={provider.Policy.MaxDictionaryEditDistance} decorated exact-count (fast path)", decorated);
+            Report(
+                $"[C] dict={provider.Policy.MaxDictionaryEditDistance} decorated exact-count (fast path)",
+                decorated
+            );
             _output.WriteLine(
                 $"[C] mean overhead: {(decorated.Average() - raw.Average()) * 1000:F1} us (raw mean {raw.Average():F4} ms, decorated mean {decorated.Average():F4} ms)"
             );
@@ -504,7 +517,9 @@ namespace EverythingToolbar.FuzzySearch.Tests
                     var cold = Stopwatch.StartNew();
                     provider.FindCandidates("neurosicence", 3, CancellationToken.None);
                     cold.Stop();
-                    _output.WriteLine($"[G] size={size} dict={dictionaryDistance}: coldFirstLookup={cold.Elapsed.TotalMilliseconds:F3} ms");
+                    _output.WriteLine(
+                        $"[G] size={size} dict={dictionaryDistance}: coldFirstLookup={cold.Elapsed.TotalMilliseconds:F3} ms"
+                    );
 
                     foreach (
                         var (shapeName, mutate, minWordLength) in new[]
@@ -530,7 +545,9 @@ namespace EverythingToolbar.FuzzySearch.Tests
                             probes.Count,
                             25
                         );
-                        var avgCandidates = probes.Average(p => provider.FindCandidates(p, 5, CancellationToken.None).Count);
+                        var avgCandidates = probes.Average(p =>
+                            provider.FindCandidates(p, 5, CancellationToken.None).Count
+                        );
                         Report(
                             $"[G] size={size} dict={dictionaryDistance} shape={shapeName} avgCandidates={avgCandidates:F2}",
                             latencies

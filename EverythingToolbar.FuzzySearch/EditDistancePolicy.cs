@@ -9,7 +9,8 @@ namespace EverythingToolbar.FuzzySearch
     /// so the textbook 4-7->1 rule fails its own target; minimum distance is enforced by SymSpell's
     /// closest-verbosity instead. Long words may use a larger distance because the extra characters
     /// disambiguate (neurosccien->neuroscience is Damerau-Levenshtein OSA distance three), measured
-    /// in the benchmark suite before defaults were chosen. SymSpell's Lookup throws when asked for a
+    /// in the benchmark suite before defaults were chosen (defaults: 4-8 -> two edits, >=9 -> three).
+    /// SymSpell's Lookup throws when asked for a
     /// larger distance than the index was built with, so every lookup distance is clamped to
     /// MaxDictionaryEditDistance and out-of-range constructor values are clamped, never rejected.
     /// Tune from corpus evidence only.
@@ -20,8 +21,14 @@ namespace EverythingToolbar.FuzzySearch
         public const int MinDictionaryEditDistance = 1;
         public const int MaxSupportedDictionaryEditDistance = 3;
         public const int MediumTermMaxDistance = 2;
-        public const int DefaultDictionaryEditDistance = 2;
-        public const int DefaultLongWordEditDistance = 2;
+
+        // Defaults chosen from the benchmark sweep (BenchmarkG, 2026-10-01): at 135k unique words
+        // distance three triples index build time (2.9s -> 9.7s) and grows the total working set
+        // ~1.4x (615MB -> 844MB) while lookups stay far below one millisecond (distance-3 p95
+        // 0.139ms) and candidate ambiguity does not increase. Medium terms deliberately stay at
+        // two edits; only terms of at least nine characters reach the long-word tier.
+        public const int DefaultDictionaryEditDistance = 3;
+        public const int DefaultLongWordEditDistance = 3;
         public const int DefaultLongWordMinLength = 9;
 
         public EditDistancePolicy(
