@@ -191,13 +191,13 @@ namespace EverythingToolbar.FuzzySearch.Tests
                 var ramMb = Process.GetCurrentProcess().WorkingSet64 / 1024.0 / 1024.0;
 
                 _output.WriteLine(
-                    $"[A] size={size}: vocabBuild={buildMs} ms indexRebuild={rebuildWatch.ElapsedMilliseconds} ms words={vocabulary.WordCount} indexEntries={provider.EntryCount} workingSet={ramMb:F1} MB"
+                    $"[A] size={size} dict={provider.Policy.MaxDictionaryEditDistance}: vocabBuild={buildMs} ms indexRebuild={rebuildWatch.ElapsedMilliseconds} ms words={vocabulary.WordCount} indexEntries={provider.EntryCount} workingSet={ramMb:F1} MB"
                 );
 
                 var cold = Stopwatch.StartNew();
                 provider.FindCandidates("neurosicence", 3, CancellationToken.None);
                 cold.Stop();
-                _output.WriteLine($"[A] size={size}: coldFirstLookup={cold.Elapsed.TotalMilliseconds:F3} ms");
+                _output.WriteLine($"[A] size={size} dict={provider.Policy.MaxDictionaryEditDistance}: coldFirstLookup={cold.Elapsed.TotalMilliseconds:F3} ms");
 
                 var random = new Random(size);
                 foreach (
@@ -229,7 +229,7 @@ namespace EverythingToolbar.FuzzySearch.Tests
                         probes.Count,
                         25
                     );
-                    Report($"[A] size={size} shape={shapeName}", latencies);
+                    Report($"[A] size={size} dict={provider.Policy.MaxDictionaryEditDistance} shape={shapeName}", latencies);
                 }
             }
         }
@@ -258,7 +258,7 @@ namespace EverythingToolbar.FuzzySearch.Tests
                 var found = provider
                     .FindCandidates(typo, 5, CancellationToken.None)
                     .Any(c => c.Correction.Equals(correction, StringComparison.OrdinalIgnoreCase));
-                Report($"[A] case={typo}->{correction} found={found}", latencies);
+                Report($"[A] dict={provider.Policy.MaxDictionaryEditDistance} case={typo}->{correction} found={found}", latencies);
             }
         }
 
@@ -272,13 +272,17 @@ namespace EverythingToolbar.FuzzySearch.Tests
             }
 
             var vocabulary = BuildVocabulary(50_000, 11, out _);
-            var planner = new FallbackQueryPlanner(AliasStore.Empty, new SymSpellCandidateProvider(vocabulary));
+            var provider = new SymSpellCandidateProvider(vocabulary);
+            var planner = new FallbackQueryPlanner(AliasStore.Empty, provider);
 
             Report(
-                "[B] planner classify+lookup+plan (mixed query)",
+                $"[B] dict={provider.Policy.MaxDictionaryEditDistance} planner classify+lookup+plan (mixed query)",
                 Latencies(() => planner.Plan("clinical attachement ext:pdf"), 500, 25)
             );
-            Report("[B] planner single literal", Latencies(() => planner.Plan("neurosicence"), 500, 25));
+            Report(
+                $"[B] dict={provider.Policy.MaxDictionaryEditDistance} planner single literal",
+                Latencies(() => planner.Plan("neurosicence"), 500, 25)
+            );
         }
 
         [Fact]
@@ -313,7 +317,7 @@ namespace EverythingToolbar.FuzzySearch.Tests
             var decorated = Latencies(() => decorator.QueryCountSync(query, 256, CancellationToken.None), 2000, 100);
 
             Report("[C] raw IEverythingClient exact-count", raw);
-            Report("[C] decorated exact-count (fast path)", decorated);
+            Report($"[C] dict={provider.Policy.MaxDictionaryEditDistance} decorated exact-count (fast path)", decorated);
             _output.WriteLine(
                 $"[C] mean overhead: {(decorated.Average() - raw.Average()) * 1000:F1} us (raw mean {raw.Average():F4} ms, decorated mean {decorated.Average():F4} ms)"
             );
@@ -373,7 +377,10 @@ namespace EverythingToolbar.FuzzySearch.Tests
             }
 
             latencies.Sort();
-            Report("[D] zero-result raw -> correction -> count(+range)", latencies.ToArray());
+            Report(
+                $"[D] dict={provider.Policy.MaxDictionaryEditDistance} zero-result raw -> correction -> count(+range)",
+                latencies.ToArray()
+            );
             refresher.Dispose();
         }
 
@@ -452,6 +459,121 @@ namespace EverythingToolbar.FuzzySearch.Tests
             _output.WriteLine($"[E] subsequent-startup time-to-Ready: {readyWatch.ElapsedMilliseconds} ms");
             refresher.Dispose();
             secondRefresher.Dispose();
+        }
+
+        [Fact]
+        public void BenchmarkG_DictionaryDistanceTwoVersusThree()
+        {
+            if (Environment.GetEnvironmentVariable("FUZZY_BENCH") is null)
+            {
+                _output.WriteLine("Skipped: set FUZZY_BENCH=1 to run benchmarks.");
+                return;
+            }
+
+            // Compares index distance 2 vs 3 at increasing vocabulary sizes: build/rebuild cost,
+            // working-set delta, and lookup latency by typo shape and distance level. The distance-3
+            // probe sets only contain probes of at least nine characters so the long-word policy
+            // tier is what is measured.
+            foreach (var size in new[] { 10_000, 50_000, 100_000, 150_000 })
+            {
+                var vocabulary = BuildVocabulary(size, 42, out _);
+                foreach (var dictionaryDistance in new[] { 2, 3 })
+                {
+                    var policy = new EditDistancePolicy(dictionaryDistance, dictionaryDistance, 9);
+                    var provider = new SymSpellCandidateProvider(vocabulary, policy);
+                    var random = new Random(dictionaryDistance * 1000 + size);
+
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+                    var workingSetBefore = Process.GetCurrentProcess().WorkingSet64;
+                    var buildWatch = Stopwatch.StartNew();
+                    provider.Rebuild();
+                    buildWatch.Stop();
+                    var workingSetAfter = Process.GetCurrentProcess().WorkingSet64;
+
+                    var rebuildWatch = Stopwatch.StartNew();
+                    provider.Rebuild();
+                    rebuildWatch.Stop();
+
+                    _output.WriteLine(
+                        $"[G] size={size} dict={dictionaryDistance}: words={vocabulary.WordCount} entries={provider.EntryCount} "
+                            + $"indexBuild={buildWatch.ElapsedMilliseconds} ms indexRebuild={rebuildWatch.ElapsedMilliseconds} ms "
+                            + $"workingSet={(workingSetAfter - workingSetBefore) / 1024.0 / 1024.0:F1} MB delta, total {workingSetAfter / 1024.0 / 1024.0:F0} MB"
+                    );
+
+                    var cold = Stopwatch.StartNew();
+                    provider.FindCandidates("neurosicence", 3, CancellationToken.None);
+                    cold.Stop();
+                    _output.WriteLine($"[G] size={size} dict={dictionaryDistance}: coldFirstLookup={cold.Elapsed.TotalMilliseconds:F3} ms");
+
+                    foreach (
+                        var (shapeName, mutate, minWordLength) in new[]
+                        {
+                            ("distance1-deletion", (Func<string, string>)Delete, 4),
+                            ("distance1-transposition", (Func<string, string>)Transpose, 4),
+                            ("distance1-insertion", (Func<string, string>)Insert, 4),
+                            ("distance1-substitution", (Func<string, string>)Substitute, 4),
+                            ("distance2-doubledeletion", (Func<string, string>)(w => Delete(Delete(w))), 6),
+                            ("distance3-tripledeletion", (Func<string, string>)(w => Delete(Delete(Delete(w)))), 12),
+                            ("distance3-mixed", (Func<string, string>)(w => Insert(Transpose(Delete(w)))), 12),
+                        }
+                    )
+                    {
+                        var probes = BuildShapeProbes(vocabulary, mutate, random, 400, minWordLength);
+                        if (probes.Count == 0)
+                        {
+                            continue;
+                        }
+
+                        var latencies = Latencies(
+                            () => provider.FindCandidates(probes[random.Next(probes.Count)], 3, CancellationToken.None),
+                            probes.Count,
+                            25
+                        );
+                        var avgCandidates = probes.Average(p => provider.FindCandidates(p, 5, CancellationToken.None).Count);
+                        Report(
+                            $"[G] size={size} dict={dictionaryDistance} shape={shapeName} avgCandidates={avgCandidates:F2}",
+                            latencies
+                        );
+                    }
+                }
+            }
+        }
+
+        private static List<string> BuildShapeProbes(
+            TokenVocabulary vocabulary,
+            Func<string, string> mutate,
+            Random random,
+            int count,
+            int minWordLength
+        )
+        {
+            var words = vocabulary
+                .WordsByFrequency()
+                .Select(e => e.Normalized)
+                .Where(w =>
+                    w.Length >= minWordLength
+                    && SafeLiteralClassifier.IsCorrectable(new SearchTerm(w, 0, SearchTermKind.PlainLiteral))
+                )
+                .ToList();
+            if (words.Count == 0)
+            {
+                return [];
+            }
+
+            var probes = new List<string>();
+            var attempts = 0;
+            while (probes.Count < count && attempts < count * 10)
+            {
+                attempts++;
+                var probe = mutate(words[random.Next(words.Count)]);
+                if (probe.Length >= SafeLiteralClassifier.MinCorrectableLength)
+                {
+                    probes.Add(probe);
+                }
+            }
+
+            return probes;
         }
 
         [Fact]
