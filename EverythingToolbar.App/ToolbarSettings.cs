@@ -175,5 +175,14 @@ namespace EverythingToolbar.App
 
         [Option(DefaultValue = true)]
         bool IsTypoTolerantSearchEnabled { get; set; }
+
+        [Option(DefaultValue = 2)]
+        int TypoMaxDictionaryEditDistance { get; set; }
+
+        [Option(DefaultValue = 2)]
+        int TypoLongWordMaxEditDistance { get; set; }
+
+        [Option(DefaultValue = 9)]
+        int TypoLongWordMinLength { get; set; }
     }
 }

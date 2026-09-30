@@ -90,6 +90,37 @@ namespace EverythingToolbar.App.Search
         /// <summary>Live vocabulary size for UI display ("Ready — N spelling terms").</summary>
         public int WordCount => _vocabulary.WordCount;
 
+        /// <summary>
+        /// Distance policy from current settings; out-of-range persisted values are clamped by
+        /// <see cref="EditDistancePolicy"/> so a corrupt ini can never crash or disable startup.
+        /// </summary>
+        internal EditDistancePolicy CurrentPolicy
+        {
+            get
+            {
+                var policy = new EditDistancePolicy(
+                    _settings.TypoMaxDictionaryEditDistance,
+                    _settings.TypoLongWordMaxEditDistance,
+                    _settings.TypoLongWordMinLength
+                );
+                if (
+                    policy.MaxDictionaryEditDistance != _settings.TypoMaxDictionaryEditDistance
+                    || policy.LongWordMaxEditDistance != _settings.TypoLongWordMaxEditDistance
+                    || policy.LongWordMinLength != _settings.TypoLongWordMinLength
+                )
+                {
+                    Logger.Warn(
+                        "Typo distance settings out of range; using dictionaryDistance={0}, longWordDistance={1}, longWordMinLength={2}",
+                        policy.MaxDictionaryEditDistance,
+                        policy.LongWordMaxEditDistance,
+                        policy.LongWordMinLength
+                    );
+                }
+
+                return policy;
+            }
+        }
+
         /// <summary>Starts the cache-load/bootstrap pipeline once; safe to call repeatedly.</summary>
         public void Start()
         {
@@ -193,7 +224,7 @@ namespace EverythingToolbar.App.Search
                         cache.Compounds.Select(c => new VocabularyEntry(c.N, c.D, c.F, IsCompound: true))
                     );
                     State = TypoVocabularyState.Refreshing;
-                    await Task.Run(() => _provider.Rebuild(), _cts.Token).ConfigureAwait(false);
+                    await Task.Run(() => _provider.Rebuild(CurrentPolicy), _cts.Token).ConfigureAwait(false);
                     State = TypoVocabularyState.Ready;
                     Logger.Info(
                         "Spelling cache loaded: terms={0}, compounds={1}",
@@ -263,7 +294,7 @@ namespace EverythingToolbar.App.Search
                 )
                 .ConfigureAwait(false);
 
-            await Task.Run(() => _provider.Rebuild(), ct).ConfigureAwait(false);
+            await Task.Run(() => _provider.Rebuild(CurrentPolicy), ct).ConfigureAwait(false);
             var snapshot = await Task.Run(() => SpellingVocabularyCache.CreateSnapshot(instance, _vocabulary), ct)
                 .ConfigureAwait(false);
             await Task.Run(() => SpellingVocabularyCache.Save(cachePath, snapshot), ct).ConfigureAwait(false);
@@ -306,7 +337,7 @@ namespace EverythingToolbar.App.Search
                 )
                 .ConfigureAwait(false);
 
-            await Task.Run(() => _provider.Rebuild(), ct).ConfigureAwait(false);
+            await Task.Run(() => _provider.Rebuild(CurrentPolicy), ct).ConfigureAwait(false);
             PersistCache();
             State = TypoVocabularyState.Ready;
             Logger.Info(
@@ -336,7 +367,7 @@ namespace EverythingToolbar.App.Search
             {
                 try
                 {
-                    _provider.Rebuild();
+                    _provider.Rebuild(CurrentPolicy);
                     if (persistCache)
                         PersistCache();
                 }
