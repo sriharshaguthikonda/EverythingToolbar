@@ -2210,5 +2210,94 @@ namespace EverythingToolbar.Properties {
             }
         }
 
+        /// <summary>
+        ///   Looks up a localized string similar to Advanced typo matching.
+        /// </summary>
+        public static string SettingsTypoAdvancedHeader {
+            get {
+                return ResourceManager.GetString("SettingsTypoAdvancedHeader", resourceCulture);
+            }
+        }
+
+
+        /// <summary>
+        ///   Looks up a localized string similar to Maximum spelling index distance.
+        /// </summary>
+        public static string SettingsTypoMaxIndexDistance {
+            get {
+                return ResourceManager.GetString("SettingsTypoMaxIndexDistance", resourceCulture);
+            }
+        }
+
+
+        /// <summary>
+        ///   Looks up a localized string similar to SettingsTypoMaxIndexDistanceHelp.
+        /// </summary>
+        public static string SettingsTypoMaxIndexDistanceHelp {
+            get {
+                return ResourceManager.GetString("SettingsTypoMaxIndexDistanceHelp", resourceCulture);
+            }
+        }
+
+
+        /// <summary>
+        ///   Looks up a localized string similar to Long-word correction distance.
+        /// </summary>
+        public static string SettingsTypoLongWordDistance {
+            get {
+                return ResourceManager.GetString("SettingsTypoLongWordDistance", resourceCulture);
+            }
+        }
+
+
+        /// <summary>
+        ///   Looks up a localized string similar to SettingsTypoLongWordDistanceHelp.
+        /// </summary>
+        public static string SettingsTypoLongWordDistanceHelp {
+            get {
+                return ResourceManager.GetString("SettingsTypoLongWordDistanceHelp", resourceCulture);
+            }
+        }
+
+
+        /// <summary>
+        ///   Looks up a localized string similar to Allow larger distance from.
+        /// </summary>
+        public static string SettingsTypoLongWordThreshold {
+            get {
+                return ResourceManager.GetString("SettingsTypoLongWordThreshold", resourceCulture);
+            }
+        }
+
+
+        /// <summary>
+        ///   Looks up a localized string similar to SettingsTypoLongWordThresholdHelp.
+        /// </summary>
+        public static string SettingsTypoLongWordThresholdHelp {
+            get {
+                return ResourceManager.GetString("SettingsTypoLongWordThresholdHelp", resourceCulture);
+            }
+        }
+
+
+        /// <summary>
+        ///   Looks up a localized string similar to characters.
+        /// </summary>
+        public static string SettingsTypoLongWordThresholdUnit {
+            get {
+                return ResourceManager.GetString("SettingsTypoLongWordThresholdUnit", resourceCulture);
+            }
+        }
+
+
+        /// <summary>
+        ///   Looks up a localized string similar to Rebuild spelling index.
+        /// </summary>
+        public static string SettingsTypoRebuildIndex {
+            get {
+                return ResourceManager.GetString("SettingsTypoRebuildIndex", resourceCulture);
+            }
+        }
+
     }
 }
