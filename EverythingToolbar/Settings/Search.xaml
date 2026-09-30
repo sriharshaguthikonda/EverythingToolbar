@@ -71,6 +71,33 @@
             HorizontalAlignment="Left"
             Click="OnRefreshVocabularyClicked"
             Content="{x:Static properties:Resources.SettingsVocabRefreshNow}" />
+          <ui:TextBlock
+            Margin="0 16 0 4"
+            FontTypography="BodyStrong"
+            Text="{x:Static properties:Resources.SettingsTypoAdvancedHeader}" />
+          <controls:SettingItem Title="{x:Static properties:Resources.SettingsTypoMaxIndexDistance}" HelpText="{x:Static properties:Resources.SettingsTypoMaxIndexDistanceHelp}">
+            <controls:SettingItem.SettingContent>
+              <ComboBox MinWidth="64" ItemsSource="{Binding DistanceItems}" SelectedValue="{Binding Settings.TypoMaxDictionaryEditDistance, Mode=TwoWay}" />
+            </controls:SettingItem.SettingContent>
+          </controls:SettingItem>
+          <controls:SettingItem Title="{x:Static properties:Resources.SettingsTypoLongWordDistance}" HelpText="{x:Static properties:Resources.SettingsTypoLongWordDistanceHelp}">
+            <controls:SettingItem.SettingContent>
+              <ComboBox MinWidth="64" ItemsSource="{Binding DistanceItems}" SelectedValue="{Binding Settings.TypoLongWordMaxEditDistance, Mode=TwoWay}" />
+            </controls:SettingItem.SettingContent>
+          </controls:SettingItem>
+          <controls:SettingItem Title="{x:Static properties:Resources.SettingsTypoLongWordThreshold}" HelpText="{x:Static properties:Resources.SettingsTypoLongWordThresholdHelp}">
+            <controls:SettingItem.SettingContent>
+              <StackPanel Orientation="Horizontal">
+                <ComboBox MinWidth="64" ItemsSource="{Binding LongWordThresholdItems}" SelectedValue="{Binding Settings.TypoLongWordMinLength, Mode=TwoWay}" />
+                <TextBlock Margin="8 0 0 0" VerticalAlignment="Center" Text="{x:Static properties:Resources.SettingsTypoLongWordThresholdUnit}" />
+              </StackPanel>
+            </controls:SettingItem.SettingContent>
+          </controls:SettingItem>
+          <Button
+            Margin="0 8 0 0"
+            HorizontalAlignment="Left"
+            Click="OnRebuildSpellingIndexClicked"
+            Content="{x:Static properties:Resources.SettingsTypoRebuildIndex}" />
         </StackPanel>
       </Border>
       <Border

@@ -54,6 +54,7 @@ namespace EverythingToolbar.App.Search
         private int _started;
         private int _learnedPaths;
         private int _refreshQueued;
+        private int _indexRebuildQueued;
         private TypoVocabularyState _state = TypoVocabularyState.Disabled;
 
         public VocabularyRefresher(
@@ -174,6 +175,46 @@ namespace EverythingToolbar.App.Search
                 finally
                 {
                     Interlocked.Exchange(ref _refreshQueued, 0);
+                }
+            });
+        }
+
+        /// <summary>
+        /// Rebuilds only the SymSpell index from the current vocabulary, e.g. after a distance
+        /// setting changed or for manual recovery. Everything is never re-enumerated, the old index
+        /// stays active until the replacement swaps in, and repeated requests are coalesced.
+        /// </summary>
+        public void RequestIndexRebuild()
+        {
+            if (Interlocked.Exchange(ref _indexRebuildQueued, 1) == 1)
+                return;
+
+            Task.Run(() =>
+            {
+                var previousState = State;
+                try
+                {
+                    if (!_settings.IsTypoTolerantSearchEnabled)
+                        return;
+
+                    State = TypoVocabularyState.Refreshing;
+                    _provider.Rebuild(CurrentPolicy);
+                    State = TypoVocabularyState.Ready;
+                }
+                catch (OperationCanceledException)
+                {
+                    State = previousState;
+                }
+                catch (Exception ex)
+                {
+                    // The previous index is still active, so typo search keeps working with the
+                    // old settings; report the failure without stranding the UI in Failed.
+                    State = previousState;
+                    Logger.Warn(ex, "Typo spelling index rebuild failed; previous index stays active");
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref _indexRebuildQueued, 0);
                 }
             });
         }
@@ -399,6 +440,18 @@ namespace EverythingToolbar.App.Search
                     RestartPipeline();
                 else
                     State = TypoVocabularyState.Disabled;
+            }
+            else if (
+                e.PropertyName
+                is nameof(ISettings.TypoMaxDictionaryEditDistance)
+                    or nameof(ISettings.TypoLongWordMaxEditDistance)
+                    or nameof(ISettings.TypoLongWordMinLength)
+            )
+            {
+                // Distance settings only reshape the SymSpell delete index; the cached token
+                // vocabulary stays valid, so no Everything re-enumeration is needed. The rebuild
+                // bumps the provider IndexVersion, which also invalidates cached fallback plans.
+                RequestIndexRebuild();
             }
         }
 

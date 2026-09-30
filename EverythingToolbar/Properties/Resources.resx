@@ -834,4 +834,31 @@
   <data name="SettingsVocabRefreshNow" xml:space="preserve">
     <value>Refresh spelling vocabulary now</value>
   </data>
+  <data name="SettingsTypoAdvancedHeader" xml:space="preserve">
+    <value>Advanced typo matching</value>
+  </data>
+  <data name="SettingsTypoMaxIndexDistance" xml:space="preserve">
+    <value>Maximum spelling index distance</value>
+  </data>
+  <data name="SettingsTypoMaxIndexDistanceHelp" xml:space="preserve">
+    <value>How many characters the spelling index can differ when building corrections. Larger values catch heavier misspellings but use more memory and rebuild more slowly. Changing this rebuilds the index in the background; exact search is never affected.</value>
+  </data>
+  <data name="SettingsTypoLongWordDistance" xml:space="preserve">
+    <value>Long-word correction distance</value>
+  </data>
+  <data name="SettingsTypoLongWordDistanceHelp" xml:space="preserve">
+    <value>Largest number of edits tried for long words. It can never exceed the spelling index distance.</value>
+  </data>
+  <data name="SettingsTypoLongWordThreshold" xml:space="preserve">
+    <value>Allow larger distance from</value>
+  </data>
+  <data name="SettingsTypoLongWordThresholdHelp" xml:space="preserve">
+    <value>Words with at least this many characters may use the long-word correction distance. Shorter words keep the conservative distance.</value>
+  </data>
+  <data name="SettingsTypoLongWordThresholdUnit" xml:space="preserve">
+    <value>characters</value>
+  </data>
+  <data name="SettingsTypoRebuildIndex" xml:space="preserve">
+    <value>Rebuild spelling index</value>
+  </data>
 </root>

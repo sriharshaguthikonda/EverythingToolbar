@@ -48,6 +48,12 @@ namespace EverythingToolbar.Settings
             new(Properties.Resources.FocusBehaviorRepeatWithSearch, FocusBehavior.RepeatWithSearch),
         ];
 
+        /// <summary>Distance levels offered for the index and long-word correction settings.</summary>
+        public List<int> DistanceItems { get; } = new() { 1, 2, 3 };
+
+        /// <summary>Sane long-word threshold options; anything outside is clamped by EditDistancePolicy.</summary>
+        public List<int> LongWordThresholdItems { get; } = Enumerable.Range(6, 10).ToList();
+
         public Search()
         {
             InitializeComponent();
@@ -85,6 +91,13 @@ namespace EverythingToolbar.Settings
         {
             // RequestRefresh is coalesced and runs off the UI thread; repeated clicks are safe.
             _vocabularyRefresher.RequestRefresh();
+        }
+
+        private void OnRebuildSpellingIndexClicked(object sender, RoutedEventArgs e)
+        {
+            // RequestIndexRebuild is coalesced, keeps the vocabulary and old index, and runs off
+            // the UI thread; repeated clicks are safe.
+            _vocabularyRefresher.RequestIndexRebuild();
         }
 
         private void LoadAliases()

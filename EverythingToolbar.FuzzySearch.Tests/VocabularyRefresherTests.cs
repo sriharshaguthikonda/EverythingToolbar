@@ -239,5 +239,65 @@ namespace EverythingToolbar.FuzzySearch.Tests
                 "instance change must trigger a fresh enumeration for the new instance"
             );
         }
+
+        [Fact]
+        public async Task DistanceSettingChange_RebuildsIndexWithoutReenumerating()
+        {
+            using var setup = CreateCorpusSetup();
+            await setup.WaitReadyAsync();
+            var initialCount = setup.Decorator.QueryCountSync(Query("neurosccien"), 256, CancellationToken.None);
+            Assert.True(initialCount > 0, "default policy must correct the three-edit typo");
+            var rangeQueriesBefore = setup.Client.CorpusRangeQueries;
+            var countQueriesBefore = setup.Client.CorpusCountQueries;
+            var versionBefore = setup.Provider.IndexVersion;
+
+            // Long-word distance three -> two: the three-edit typo must stop correcting while the
+            // distance-one typo keeps working.
+            setup.Settings.TypoLongWordMaxEditDistance = 2;
+            await WaitForIndexRebuildAsync(setup, versionBefore);
+
+            Assert.Equal(TypoVocabularyState.Ready, setup.Refresher.State);
+            Assert.Equal(rangeQueriesBefore, setup.Client.CorpusRangeQueries);
+            Assert.Equal(countQueriesBefore, setup.Client.CorpusCountQueries);
+            Assert.NotNull(setup.Vocabulary.Find("neuroscience"));
+
+            var threeEditCount = setup.Decorator.QueryCountSync(Query("neurosccien"), 256, CancellationToken.None);
+            Assert.Equal(0, threeEditCount);
+            var oneEditCount = setup.Decorator.QueryCountSync(Query("neurosicence"), 256, CancellationToken.None);
+            Assert.True(oneEditCount > 0, "distance-one corrections must survive the distance change");
+        }
+
+        [Fact]
+        public async Task InvalidDistanceSettings_AreClampedAndKeepWorking()
+        {
+            using var setup = CreateCorpusSetup();
+            await setup.WaitReadyAsync();
+            var versionBefore = setup.Provider.IndexVersion;
+
+            setup.Settings.TypoMaxDictionaryEditDistance = 99;
+            setup.Settings.TypoLongWordMaxEditDistance = 7;
+            await WaitForIndexRebuildAsync(setup, versionBefore);
+
+            Assert.Equal(TypoVocabularyState.Ready, setup.Refresher.State);
+            Assert.Equal(3, setup.Provider.Policy.MaxDictionaryEditDistance);
+            Assert.Equal(3, setup.Provider.Policy.LongWordMaxEditDistance);
+            var count = setup.Decorator.QueryCountSync(Query("neurosccien"), 256, CancellationToken.None);
+            Assert.True(count > 0, "clamped distance-three policy must still correct the corpus typo");
+        }
+
+        private static async Task WaitForIndexRebuildAsync(Setup setup, int versionBefore)
+        {
+            var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(30);
+            while (
+                (setup.Provider.IndexVersion <= versionBefore || setup.Refresher.State != TypoVocabularyState.Ready)
+                && DateTime.UtcNow < deadline
+            )
+            {
+                await Task.Delay(25);
+            }
+
+            Assert.True(setup.Provider.IndexVersion > versionBefore, "the index must rebuild after the setting change");
+            Assert.Equal(TypoVocabularyState.Ready, setup.Refresher.State);
+        }
     }
 }
