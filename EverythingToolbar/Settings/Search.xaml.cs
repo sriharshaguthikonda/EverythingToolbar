@@ -49,7 +49,24 @@ namespace EverythingToolbar.Settings
         ];
 
         /// <summary>Distance levels offered for the index and long-word correction settings.</summary>
-        public List<int> DistanceItems { get; } = new() { 1, 2, 3 };
+        public List<int> DistanceItems { get; } =
+            Enumerable.Range(1, EditDistancePolicy.MaxSupportedDictionaryEditDistance).ToList();
+
+        /// <summary>
+        /// Long-word correction distance can never exceed the index distance (SymSpell's Lookup
+        /// throws above the built maximum), so the selector offers 1..indexDistance only and is
+        /// re-clamped whenever the index distance shrinks.
+        /// </summary>
+        public List<int> LongWordDistanceItems =>
+            Enumerable
+                .Range(
+                    1,
+                    Math.Min(
+                        Settings.TypoMaxDictionaryEditDistance,
+                        EditDistancePolicy.MaxSupportedDictionaryEditDistance
+                    )
+                )
+                .ToList();
 
         /// <summary>Sane long-word threshold options; anything outside is clamped by EditDistancePolicy.</summary>
         public List<int> LongWordThresholdItems { get; } = Enumerable.Range(6, 10).ToList();
@@ -113,6 +130,16 @@ namespace EverythingToolbar.Settings
             if (e.PropertyName == nameof(ISettings.IsForceLegacySdk))
             {
                 OnPropertyChanged(nameof(IsResultOmissionsSupported));
+            }
+            else if (e.PropertyName == nameof(ISettings.TypoMaxDictionaryEditDistance))
+            {
+                OnPropertyChanged(nameof(LongWordDistanceItems));
+                if (Settings.TypoLongWordMaxEditDistance > Settings.TypoMaxDictionaryEditDistance)
+                {
+                    // The long-word distance must stay within the index distance; clamp so the
+                    // value the user sees is the value the planner uses.
+                    Settings.TypoLongWordMaxEditDistance = Settings.TypoMaxDictionaryEditDistance;
+                }
             }
         }
 

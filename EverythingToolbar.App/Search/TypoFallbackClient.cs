@@ -148,9 +148,12 @@ namespace EverythingToolbar.App.Search
 
             // Re-plan when the candidate index changed (e.g. the vocabulary became ready after a
             // first zero-result lookup): a cached null plan must not outlive the index version it
-            // was planned against.
+            // was planned against. The plan is cached under the version read AFTER planning:
+            // a cold plan can build the index and bump its version, and caching the pre-plan
+            // version would make Resolve() discard the plan immediately and fall back to the
+            // raw query (discovered in live elevated testing: count>0 but zero range rows).
             var plan = _planner.Plan(query.SearchText, cancellationToken);
-            _plans[query] = new PlanEntry(plan, currentVersion);
+            _plans[query] = new PlanEntry(plan, _planner.IndexVersion);
             return plan;
         }
 

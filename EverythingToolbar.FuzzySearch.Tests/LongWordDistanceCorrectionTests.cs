@@ -1,7 +1,6 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
+using EverythingToolbar.FuzzySearch.Tests.Support;
 using Xunit;
 
 namespace EverythingToolbar.FuzzySearch.Tests
@@ -30,44 +29,12 @@ namespace EverythingToolbar.FuzzySearch.Tests
             "kanata",
             "clinical",
             "project",
+            // Long scientific targets for the distance 4-7 corpus rows.
+            "oligodendrocyte",
+            "electrophysiology",
+            "neurodegeneration",
+            "immunohistochemistry",
         };
-
-        /// <summary>Reference optimal string alignment (restricted Damerau-Levenshtein) distance.</summary>
-        private static int OptimalStringAlignment(string a, string b)
-        {
-            var d = new int[a.Length + 1, b.Length + 1];
-            for (var i = 0; i <= a.Length; i++)
-            {
-                d[i, 0] = i;
-            }
-
-            for (var j = 0; j <= b.Length; j++)
-            {
-                d[0, j] = j;
-            }
-
-            for (var i = 1; i <= a.Length; i++)
-            {
-                for (var j = 1; j <= b.Length; j++)
-                {
-                    var substitution = a[i - 1] == b[j - 1] ? 0 : 1;
-                    d[i, j] = Math.Min(Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1), d[i - 1, j - 1] + substitution);
-                    if (i > 1 && j > 1 && a[i - 1] == b[j - 2] && a[i - 2] == b[j - 1])
-                    {
-                        d[i, j] = Math.Min(d[i, j], d[i - 2, j - 2] + 1);
-                    }
-                }
-            }
-
-            return d[a.Length, b.Length];
-        }
-
-        /// <summary>Removes the characters at the given indices; three deletions of an n-char word.</summary>
-        private static string DeleteChars(string word, params int[] indices)
-        {
-            var removed = new HashSet<int>(indices);
-            return new string(word.Where((_, i) => !removed.Contains(i)).ToArray());
-        }
 
         private static TokenVocabulary BuildVocabulary()
         {
@@ -111,11 +78,11 @@ namespace EverythingToolbar.FuzzySearch.Tests
         {
             if (deletedIndices.Length > 0)
             {
-                typo = DeleteChars(correction, deletedIndices);
+                typo = DistanceTestSupport.DeleteChars(correction, deletedIndices);
             }
 
             Assert.True(
-                OptimalStringAlignment(typo, correction) == 3,
+                DistanceTestSupport.OptimalStringAlignment(typo, correction) == 3,
                 $"{typo} -> {correction} must be OSA distance three"
             );
             Assert.True(typo.Length >= 9, "corpus typos must be long words under the default threshold");
@@ -138,7 +105,7 @@ namespace EverythingToolbar.FuzzySearch.Tests
         {
             if (deletedIndices.Length > 0)
             {
-                typo = DeleteChars(correction, deletedIndices);
+                typo = DistanceTestSupport.DeleteChars(correction, deletedIndices);
             }
 
             var provider = new SymSpellCandidateProvider(BuildVocabulary());
@@ -149,14 +116,92 @@ namespace EverythingToolbar.FuzzySearch.Tests
             Assert.Equal(correction, candidates[0].Correction, ignoreCase: true);
         }
 
+        /// <summary>
+        /// Full 1-7 corpus: typo = the target with the listed characters removed, so the OSA
+        /// distance is exactly the deletion count (length difference lower bound, subsequence
+        /// upper bound) and never an assumption. Targets are real-looking long terms where
+        /// multi-edit misspellings are plausible.
+        /// </summary>
+        public static TheoryData<int, string, int[]> DistanceOneToSevenCorpus()
+        {
+            return new TheoryData<int, string, int[]>
+            {
+                { 1, "neuroscience", new[] { 3 } },
+                { 2, "neuroscience", new[] { 1, 5 } },
+                { 3, "refrigerator", new[] { 1, 4, 6 } },
+                { 4, "oligodendrocyte", new[] { 2, 5, 8, 11 } },
+                { 5, "electrophysiology", new[] { 1, 4, 7, 10, 14 } },
+                { 6, "neurodegeneration", new[] { 0, 3, 6, 9, 12, 15 } },
+                { 7, "immunohistochemistry", new[] { 1, 4, 7, 10, 13, 16, 19 } },
+            };
+        }
+
+        [Theory]
+        [MemberData(nameof(DistanceOneToSevenCorpus))]
+        public void Corpus_EveryDistanceOneToSeven_CorrectsAtItsLevel_AndNotBelow(
+            int distance,
+            string correction,
+            int[] deletedIndices
+        )
+        {
+            var typo = DistanceTestSupport.DeleteChars(correction, deletedIndices);
+            Assert.True(
+                DistanceTestSupport.OptimalStringAlignment(typo, correction) == distance,
+                $"{typo} -> {correction} must be OSA distance {distance}, not assumed"
+            );
+            Assert.True(typo.Length >= 9, "corpus typos must be long words under the default threshold");
+
+            // At the required distance the target is the closest correction.
+            var at = new SymSpellCandidateProvider(BuildVocabulary(), new EditDistancePolicy(distance, distance, 9));
+            var candidatesAt = at.FindCandidates(typo, 5, CancellationToken.None);
+            Assert.NotEmpty(candidatesAt);
+            Assert.Equal(correction, candidatesAt[0].Correction, ignoreCase: true);
+
+            // One level below, the target must not appear: higher distances never leak downward.
+            if (distance > EditDistancePolicy.MinDictionaryEditDistance)
+            {
+                var below = new SymSpellCandidateProvider(
+                    BuildVocabulary(),
+                    new EditDistancePolicy(distance - 1, distance - 1, 9)
+                );
+                var candidatesBelow = below.FindCandidates(typo, 5, CancellationToken.None);
+                Assert.DoesNotContain(
+                    candidatesBelow,
+                    c => c.Correction.Equals(correction, StringComparison.OrdinalIgnoreCase)
+                );
+            }
+        }
+
+        [Fact]
+        public void DistanceSevenPolicy_DoesNotCorrectMediumTerms()
+        {
+            // repomsp -> repomaps is distance two; a distance-seven index must not turn the
+            // medium tier into seven edits.
+            var provider = new SymSpellCandidateProvider(BuildVocabulary(), new EditDistancePolicy(7, 7, 9));
+
+            var candidates = provider.FindCandidates("repomsp", 5, CancellationToken.None);
+
+            Assert.NotEmpty(candidates);
+            Assert.Equal("repomaps", candidates[0].Correction, ignoreCase: true);
+            Assert.DoesNotContain(candidates, c => c.EditDistance > EditDistancePolicy.MediumTermMaxDistance);
+        }
+
+        [Fact]
+        public void DistanceSevenPolicy_UnknownLongWordStaysUnresolved()
+        {
+            var provider = new SymSpellCandidateProvider(BuildVocabulary(), new EditDistancePolicy(7, 7, 9));
+
+            Assert.Empty(provider.FindCandidates("pneumonoultramicros", 5, CancellationToken.None));
+        }
+
         [Fact]
         public void DistanceThree_DoesNotLeakIntoMediumTerms()
         {
             // document -> dcmnt is three deletions (OSA distance three) but the five-character
             // result stays under the long-word threshold, so the medium cap of two applies even
             // when the index was built for distance three.
-            var typo = DeleteChars("document", 1, 3, 5);
-            Assert.Equal(3, OptimalStringAlignment(typo, "document"));
+            var typo = DistanceTestSupport.DeleteChars("document", 1, 3, 5);
+            Assert.Equal(3, DistanceTestSupport.OptimalStringAlignment(typo, "document"));
             Assert.Equal(5, typo.Length);
 
             var provider = CreateDistanceThreeProvider();

@@ -33,5 +33,6 @@
   <ItemGroup>
     <ProjectReference Include="..\EverythingToolbar.FuzzySearch\EverythingToolbar.FuzzySearch.csproj" />
     <ProjectReference Include="..\EverythingToolbar.App\EverythingToolbar.App.csproj" />
+    <ProjectReference Include="..\EverythingToolbar\EverythingToolbar.csproj" />
   </ItemGroup>
 </Project>

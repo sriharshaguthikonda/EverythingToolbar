@@ -76,6 +76,16 @@ namespace EverythingToolbar.FuzzySearch.Tests
             ("kanataa", "kanata"),
         };
 
+        private static readonly string[] LongBenchmarkWords =
+        {
+            "electrophysiology",
+            "neurodegeneration",
+            "immunohistochemistry",
+            "oligodendrocyte",
+            "electroencephalography",
+            "gastroenterology",
+        };
+
         private readonly ITestOutputHelper _output;
         private readonly Random _probeRandom = new(20260930);
 
@@ -122,6 +132,18 @@ namespace EverythingToolbar.FuzzySearch.Tests
             var mid = word.Length / 2;
             var replacement = word[mid] == 'x' ? 'q' : 'x';
             return word[..mid] + replacement + word[(mid + 1)..];
+        }
+
+        private static string MutateChain(string word, int steps, Random random)
+        {
+            Func<string, string>[] ops = { Delete, Insert, Substitute, Transpose };
+            var current = word;
+            for (var k = 0; k < steps; k++)
+            {
+                current = ops[k % 4](current);
+            }
+
+            return current;
         }
 
         private static TokenVocabulary BuildVocabulary(int wordCount, int seed, out long buildMs)
@@ -555,6 +577,175 @@ namespace EverythingToolbar.FuzzySearch.Tests
                     }
                 }
             }
+        }
+
+        [Fact]
+        public void BenchmarkH_DistanceSweepOneToSeven()
+        {
+            if (Environment.GetEnvironmentVariable("FUZZY_BENCH") is null)
+            {
+                _output.WriteLine("Skipped: set FUZZY_BENCH=1 to run benchmarks.");
+                return;
+            }
+
+            // Full index-distance sweep 1..7 at increasing vocabulary sizes: build/rebuild cost,
+            // working-set delta, and lookup latency by deletion depth (the exact-distance corpus
+            // lives in LongWordDistanceCorrectionTests). Long scientific words are seeded into the
+            // synthetic vocabulary so high-distance probes exist at all; deletion depth n probes
+            // only use words of at least 9+n characters, which is where the long-word tier applies.
+            foreach (var size in new[] { 10_000, 50_000, 100_000 })
+            {
+                var vocabulary = BuildVocabulary(size, 42, out _);
+                foreach (var longWord in LongBenchmarkWords)
+                {
+                    for (var i = 0; i < 5; i++)
+                    {
+                        vocabulary.AddPath(longWord);
+                    }
+                }
+
+                foreach (var distance in Enumerable.Range(1, 7))
+                {
+                    var policy = new EditDistancePolicy(distance, distance, 9);
+                    var provider = new SymSpellCandidateProvider(vocabulary, policy);
+                    var random = new Random(distance * 977 + size);
+
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+                    var workingSetBefore = Process.GetCurrentProcess().WorkingSet64;
+                    var buildWatch = Stopwatch.StartNew();
+                    provider.Rebuild();
+                    buildWatch.Stop();
+                    var workingSetAfter = Process.GetCurrentProcess().WorkingSet64;
+                    var rebuildWatch = Stopwatch.StartNew();
+                    provider.Rebuild();
+                    rebuildWatch.Stop();
+
+                    _output.WriteLine(
+                        $"[H] size={size} dict={distance} prefix={SymSpellCandidateProvider.PrefixLengthFor(distance)}: "
+                            + $"words={vocabulary.WordCount} entries={provider.EntryCount} "
+                            + $"indexBuild={buildWatch.ElapsedMilliseconds} ms indexRebuild={rebuildWatch.ElapsedMilliseconds} ms "
+                            + $"workingSetDelta={(workingSetAfter - workingSetBefore) / 1024.0 / 1024.0:F1} MB, total {workingSetAfter / 1024.0 / 1024.0:F0} MB"
+                    );
+
+                    var cold = Stopwatch.StartNew();
+                    provider.FindCandidates("electrphysilogy", 3, CancellationToken.None);
+                    cold.Stop();
+                    _output.WriteLine(
+                        $"[H] size={size} dict={distance}: coldFirstLookup={cold.Elapsed.TotalMilliseconds:F3} ms"
+                    );
+
+                    for (var depth = 1; depth <= distance; depth++)
+                    {
+                        var probes = BuildShapeProbes(
+                            vocabulary,
+                            w => DistanceTestSupport.DeleteSpread(w, depth),
+                            random,
+                            300,
+                            9 + depth
+                        );
+                        if (probes.Count == 0)
+                        {
+                            continue;
+                        }
+
+                        var latencies = Latencies(
+                            () => provider.FindCandidates(probes[random.Next(probes.Count)], 3, CancellationToken.None),
+                            probes.Count,
+                            20
+                        );
+                        var avgCandidates = probes.Average(p =>
+                            provider.FindCandidates(p, 5, CancellationToken.None).Count
+                        );
+                        Report(
+                            $"[H] size={size} dict={distance} shape=deletion{depth} avgCandidates={avgCandidates:F2}",
+                            latencies
+                        );
+                    }
+
+                    var mixedProbes = BuildShapeProbes(
+                        vocabulary,
+                        w => MutateChain(w, distance, random),
+                        random,
+                        300,
+                        9 + distance
+                    );
+                    if (mixedProbes.Count > 0)
+                    {
+                        var mixedLatencies = Latencies(
+                            () =>
+                                provider.FindCandidates(
+                                    mixedProbes[random.Next(mixedProbes.Count)],
+                                    3,
+                                    CancellationToken.None
+                                ),
+                            mixedProbes.Count,
+                            20
+                        );
+                        Report($"[H] size={size} dict={distance} shape=mixed{distance} (approx depth)", mixedLatencies);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task BenchmarkI_RebuildWhileQueriesContinue()
+        {
+            if (Environment.GetEnvironmentVariable("FUZZY_BENCH") is null)
+            {
+                _output.WriteLine("Skipped: set FUZZY_BENCH=1 to run benchmarks.");
+                return;
+            }
+
+            // Measures lookup latency while a distance 3 -> 7 rebuild runs in the background: the
+            // old index must keep serving until the atomic swap (correctness contract is asserted
+            // in SymSpellCandidateProviderConcurrencyTests; these are the numbers).
+            var vocabulary = BuildVocabulary(50_000, 13, out _);
+            var provider = new SymSpellCandidateProvider(vocabulary, new EditDistancePolicy(3, 3, 9));
+            provider.Rebuild();
+            var random = new Random(13);
+            var probes = BuildShapeProbes(vocabulary, Transpose, random, 500, 6);
+            Assert.NotEmpty(probes);
+
+            var latencies = new System.Collections.Concurrent.ConcurrentQueue<double>();
+            var lookups = 0;
+            var stop = false;
+            var failures = new List<Exception>();
+            var lookupTask = Task.Run(() =>
+            {
+                while (Volatile.Read(ref stop) == false)
+                {
+                    try
+                    {
+                        var watch = Stopwatch.StartNew();
+                        provider.FindCandidates(probes[random.Next(probes.Count)], 3, CancellationToken.None);
+                        watch.Stop();
+                        latencies.Enqueue(watch.Elapsed.TotalMilliseconds);
+                        Interlocked.Increment(ref lookups);
+                    }
+                    catch (Exception ex)
+                    {
+                        lock (failures)
+                        {
+                            failures.Add(ex);
+                        }
+                        break;
+                    }
+                }
+            });
+
+            var rebuildWatch = Stopwatch.StartNew();
+            provider.Rebuild(new EditDistancePolicy(7, 7, 9));
+            rebuildWatch.Stop();
+            Volatile.Write(ref stop, true);
+            await lookupTask.ConfigureAwait(false);
+
+            Assert.Empty(failures);
+            Assert.True(lookups > 0, "lookups must continue during the rebuild");
+            Report(
+                $"[I] lookups during a dict 3->7 rebuild ({lookups} lookups, rebuild {rebuildWatch.ElapsedMilliseconds} ms)",
+                latencies.OrderBy(l => l).ToArray()
+            );
         }
 
         private static List<string> BuildShapeProbes(

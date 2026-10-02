@@ -197,8 +197,19 @@ namespace EverythingToolbar.App.Search
                     if (!_settings.IsTypoTolerantSearchEnabled)
                         return;
 
-                    State = TypoVocabularyState.Refreshing;
-                    _provider.Rebuild(CurrentPolicy);
+                    // Requests arriving while a rebuild runs are dropped by the queue flag, so a
+                    // distance setting changed mid-build would otherwise leave a stale index.
+                    // Converge until the active index matches current settings; the first pass
+                    // always rebuilds (also what the manual rebuild button needs). Bounded: the
+                    // next settings change re-triggers if churn outlives the bound.
+                    for (var attempt = 0; attempt < 3; attempt++)
+                    {
+                        State = TypoVocabularyState.Refreshing;
+                        _provider.Rebuild(CurrentPolicy);
+                        if (_provider.Policy == CurrentPolicy)
+                            break;
+                    }
+
                     State = TypoVocabularyState.Ready;
                 }
                 catch (OperationCanceledException)

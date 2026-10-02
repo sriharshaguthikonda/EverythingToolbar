@@ -275,14 +275,74 @@ namespace EverythingToolbar.FuzzySearch.Tests
             var versionBefore = setup.Provider.IndexVersion;
 
             setup.Settings.TypoMaxDictionaryEditDistance = 99;
-            setup.Settings.TypoLongWordMaxEditDistance = 7;
+            setup.Settings.TypoLongWordMaxEditDistance = 99;
             await WaitForIndexRebuildAsync(setup, versionBefore);
 
             Assert.Equal(TypoVocabularyState.Ready, setup.Refresher.State);
-            Assert.Equal(3, setup.Provider.Policy.MaxDictionaryEditDistance);
-            Assert.Equal(3, setup.Provider.Policy.LongWordMaxEditDistance);
+            Assert.Equal(
+                EditDistancePolicy.MaxSupportedDictionaryEditDistance,
+                setup.Provider.Policy.MaxDictionaryEditDistance
+            );
+            Assert.Equal(
+                EditDistancePolicy.MaxSupportedDictionaryEditDistance,
+                setup.Provider.Policy.LongWordMaxEditDistance
+            );
             var count = setup.Decorator.QueryCountSync(Query("neurosccien"), 256, CancellationToken.None);
-            Assert.True(count > 0, "clamped distance-three policy must still correct the corpus typo");
+            Assert.True(count > 0, "clamped distance policy must still correct the corpus typo");
+        }
+
+        [Fact]
+        public async Task RapidDistanceChanges_ConvergeToFinalValue_WithoutCompetingRebuilds()
+        {
+            // A vocabulary large enough that one index build takes long enough for all six
+            // property changes below to land while the first rebuild is still running - the
+            // situation where dropped requests could leave a stale index.
+            var corpusDir = Path.Combine(_rootDir, "corpus-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(corpusDir);
+            var corpus = new List<string>();
+            for (var i = 0; i < 15_000; i++)
+            {
+                corpus.Add(Path.Combine(corpusDir, $"term_{i:D6}_subfolder_{i % 97}_file.txt"));
+            }
+
+            using var setup = new Setup(
+                Path.Combine(_rootDir, "cache-" + Guid.NewGuid().ToString("N")),
+                client: new FakeEverythingClient { PathCorpus = corpus }
+            );
+            await setup.WaitReadyAsync();
+            var versionBefore = setup.Provider.IndexVersion;
+
+            // Rapid 3 -> 4 -> 5 -> 7 style churn: requests landing while a rebuild runs are
+            // coalesced (dropped), so the pipeline must converge to the final settings instead of
+            // leaving a stale index, and must not launch one build per change.
+            setup.Settings.TypoMaxDictionaryEditDistance = 4;
+            setup.Settings.TypoLongWordMaxEditDistance = 4;
+            setup.Settings.TypoMaxDictionaryEditDistance = 5;
+            setup.Settings.TypoLongWordMaxEditDistance = 5;
+            setup.Settings.TypoMaxDictionaryEditDistance = EditDistancePolicy.MaxSupportedDictionaryEditDistance;
+            setup.Settings.TypoLongWordMaxEditDistance = EditDistancePolicy.MaxSupportedDictionaryEditDistance;
+
+            await WaitForIndexRebuildAsync(setup, versionBefore);
+
+            var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(60);
+            while (setup.Provider.Policy != new EditDistancePolicy(7, 7, 9) && DateTime.UtcNow < deadline)
+            {
+                await Task.Delay(25);
+            }
+
+            Assert.Equal(
+                EditDistancePolicy.MaxSupportedDictionaryEditDistance,
+                setup.Provider.Policy.MaxDictionaryEditDistance
+            );
+            Assert.Equal(
+                EditDistancePolicy.MaxSupportedDictionaryEditDistance,
+                setup.Provider.Policy.LongWordMaxEditDistance
+            );
+            Assert.Equal(TypoVocabularyState.Ready, setup.Refresher.State);
+            Assert.True(
+                setup.Provider.IndexVersion - versionBefore <= 3,
+                $"coalescing must bound rebuild churn, saw {setup.Provider.IndexVersion - versionBefore} rebuilds"
+            );
         }
 
         private static async Task WaitForIndexRebuildAsync(Setup setup, int versionBefore)

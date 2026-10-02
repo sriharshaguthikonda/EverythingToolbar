@@ -10,23 +10,27 @@ namespace EverythingToolbar.FuzzySearch
     /// closest-verbosity instead. Long words may use a larger distance because the extra characters
     /// disambiguate (neurosccien->neuroscience is Damerau-Levenshtein OSA distance three), measured
     /// in the benchmark suite before defaults were chosen (defaults: 4-8 -> two edits, >=9 -> three).
-    /// SymSpell's Lookup throws when asked for a
-    /// larger distance than the index was built with, so every lookup distance is clamped to
+    /// The index distance is configurable 1-7; SymSpell's Lookup throws when asked for a larger
+    /// distance than the index was built with, so every lookup distance is clamped to
     /// MaxDictionaryEditDistance and out-of-range constructor values are clamped, never rejected.
     /// Tune from corpus evidence only.
     /// </summary>
-    public sealed class EditDistancePolicy
+    public sealed class EditDistancePolicy : IEquatable<EditDistancePolicy>
     {
         public const int MinCorrectableLength = SafeLiteralClassifier.MinCorrectableLength;
         public const int MinDictionaryEditDistance = 1;
-        public const int MaxSupportedDictionaryEditDistance = 3;
+        public const int MaxSupportedDictionaryEditDistance = 7;
         public const int MediumTermMaxDistance = 2;
 
         // Defaults chosen from the benchmark sweep (BenchmarkG, 2026-10-01): at 135k unique words
         // distance three triples index build time (2.9s -> 9.7s) and grows the total working set
         // ~1.4x (615MB -> 844MB) while lookups stay far below one millisecond (distance-3 p95
-        // 0.139ms) and candidate ambiguity does not increase. Medium terms deliberately stay at
-        // two edits; only terms of at least nine characters reach the long-word tier.
+        // 0.139ms) and candidate ambiguity does not increase. Distances 4-7 remain selectable
+        // because SymSpell supports them (only its prefixLength must exceed the index distance;
+        // see SymSpellCandidateProvider.PrefixLengthFor) and long-word lookups stay
+        // sub-millisecond, but they cost more build time and memory (BenchmarkH, 2026-10-02), so
+        // the defaults stay at three. Medium terms deliberately stay at two edits; only terms of
+        // at least nine characters reach the long-word tier.
         public const int DefaultDictionaryEditDistance = 3;
         public const int DefaultLongWordEditDistance = 3;
         public const int DefaultLongWordMinLength = 9;
@@ -75,5 +79,25 @@ namespace EverythingToolbar.FuzzySearch
 
             return Math.Min(LongWordMaxEditDistance, MaxDictionaryEditDistance);
         }
+
+        /// <summary>
+        /// Value equality: the rebuild pipeline compares the active index's policy against current
+        /// settings after each build to detect settings that changed mid-rebuild.
+        /// </summary>
+        public bool Equals(EditDistancePolicy? other) =>
+            other is not null
+            && MaxDictionaryEditDistance == other.MaxDictionaryEditDistance
+            && LongWordMaxEditDistance == other.LongWordMaxEditDistance
+            && LongWordMinLength == other.LongWordMinLength;
+
+        public override bool Equals(object? obj) => obj is EditDistancePolicy other && Equals(other);
+
+        public override int GetHashCode() =>
+            System.HashCode.Combine(MaxDictionaryEditDistance, LongWordMaxEditDistance, LongWordMinLength);
+
+        public static bool operator ==(EditDistancePolicy? left, EditDistancePolicy? right) =>
+            left?.Equals(right) ?? right is null;
+
+        public static bool operator !=(EditDistancePolicy? left, EditDistancePolicy? right) => !(left == right);
     }
 }

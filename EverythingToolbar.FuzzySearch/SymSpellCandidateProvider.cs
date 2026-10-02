@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -15,10 +16,21 @@ namespace EverythingToolbar.FuzzySearch
     {
         private const int SymSpellInitialCapacity = 82764;
 
-        // SymSpell's default. Kept internal: it must stay strictly greater than the maximum
-        // dictionary edit distance (SymSpell throws otherwise), and shrinking it trades correction
-        // accuracy for memory with no measured benefit at real vocabulary sizes.
-        private const int PrefixLength = 7;
+        // SymSpell's default, and the prefix length used for index distances 1-6. Kept internal:
+        // users tune edit distance, not this knob.
+        private const int DefaultPrefixLength = 7;
+
+        /// <summary>
+        /// Smallest safe SymSpell prefix length for an index distance. SymSpell 6.7.3's constructor
+        /// throws ArgumentOutOfRangeException unless prefixLength is strictly greater than the
+        /// maxDictionaryEditDistance it is built with (verified in SymSpell/SymSpell.cs v6.7.3), so
+        /// distance 7 requires a prefix of at least 8. The default 7 stays for distances 1-6: a
+        /// larger prefix enumerates more deletes inside the prefix window, growing index size and
+        /// build time without a measured recall benefit, and the delete index itself has no upper
+        /// distance bound. Users control edit distance; this stays an implementation detail.
+        /// </summary>
+        public static int PrefixLengthFor(int maxDictionaryEditDistance) =>
+            Math.Max(DefaultPrefixLength, maxDictionaryEditDistance + 1);
 
         private readonly TokenVocabulary _vocabulary;
         private readonly object _gate = new();
@@ -34,7 +46,11 @@ namespace EverythingToolbar.FuzzySearch
         {
             _vocabulary = vocabulary;
             _policy = policy;
-            _symSpell = new SymSpell(SymSpellInitialCapacity, policy.MaxDictionaryEditDistance, PrefixLength);
+            _symSpell = new SymSpell(
+                SymSpellInitialCapacity,
+                policy.MaxDictionaryEditDistance,
+                PrefixLengthFor(policy.MaxDictionaryEditDistance)
+            );
         }
 
         /// <summary>The clamped policy of the active index (may differ from raw settings values).</summary>
@@ -139,7 +155,11 @@ namespace EverythingToolbar.FuzzySearch
 
         private static SymSpell Build(TokenVocabulary vocabulary, EditDistancePolicy policy)
         {
-            var symSpell = new SymSpell(SymSpellInitialCapacity, policy.MaxDictionaryEditDistance, PrefixLength);
+            var symSpell = new SymSpell(
+                SymSpellInitialCapacity,
+                policy.MaxDictionaryEditDistance,
+                PrefixLengthFor(policy.MaxDictionaryEditDistance)
+            );
             foreach (var entry in vocabulary.WordsByFrequency())
             {
                 symSpell.CreateDictionaryEntry(entry.Normalized, entry.Frequency > 0 ? entry.Frequency : 1);

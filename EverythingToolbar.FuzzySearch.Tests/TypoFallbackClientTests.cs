@@ -135,6 +135,51 @@ namespace EverythingToolbar.FuzzySearch.Tests
             Assert.Equal(["zzzzunknown"], inner.CountQueries);
         }
 
+        /// <summary>
+        /// Mimics a cold start: the candidate index is built lazily during the first plan, which
+        /// bumps the provider's IndexVersion mid-planning. The plan must be cached under the
+        /// version that produced it, or range reads fall back to the raw typo query (found in
+        /// live elevated testing as count&gt;0 with zero result rows).
+        /// </summary>
+        private sealed class ColdBuildCandidateProvider : ITypoCandidateProvider
+        {
+            public int IndexVersion { get; private set; }
+
+            public IReadOnlyList<TypoCandidate> FindCandidates(
+                string term,
+                int maxResults,
+                CancellationToken cancellationToken
+            )
+            {
+                if (IndexVersion == 0)
+                {
+                    IndexVersion++;
+                }
+
+                return term == "neurosicence" ? [new TypoCandidate("neuroscience", 2, 10)] : [];
+            }
+        }
+
+        [Fact]
+        public void ColdIndex_RangeFollowsCorrectedText_EvenWhenPlanningBumpsIndexVersion()
+        {
+            var inner = new RecordingClient { CountFor = q => (q.Contains("neuroscience") ? 4 : 0) };
+            var decorator = new TypoFallbackClient(
+                inner,
+                new FallbackQueryPlanner(AliasStore.Empty, new ColdBuildCandidateProvider()),
+                TestSettingsFactory.Create(typoTolerantSearchEnabled: true)
+            );
+
+            var query = Query("neurosicence");
+            var count = decorator.QueryCountSync(query, 256, CancellationToken.None);
+            Assert.Equal(4, count);
+
+            decorator.QueryRangeSync(query, 0, 256, CancellationToken.None);
+
+            // The range read must resolve through the corrected plan, never the raw typo.
+            Assert.Equal("<neurosicence|neuroscience>", inner.RangeQueries[^1]);
+        }
+
         [Fact]
         public void DisabledFeature_NeverPlansFallback()
         {

@@ -87,7 +87,7 @@
             <controls:SettingItem.SettingContent>
               <ComboBox
                 MinWidth="64"
-                ItemsSource="{Binding DistanceItems}"
+                ItemsSource="{Binding LongWordDistanceItems}"
                 SelectedValue="{Binding Settings.TypoLongWordMaxEditDistance, Mode=TwoWay}" />
             </controls:SettingItem.SettingContent>
           </controls:SettingItem>

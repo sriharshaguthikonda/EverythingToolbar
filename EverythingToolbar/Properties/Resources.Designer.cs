@@ -2102,6 +2102,24 @@ namespace EverythingToolbar.Properties {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Search settings.
+        /// </summary>
+        public static string SettingsSearchSettings {
+            get {
+                return ResourceManager.GetString("SettingsSearchSettings", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Type to filter all settings.
+        /// </summary>
+        public static string SettingsSearchSettingsHelp {
+            get {
+                return ResourceManager.GetString("SettingsSearchSettingsHelp", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to {0}.
         /// </summary>
         public static string SettingsTypoTolerantSearch {
