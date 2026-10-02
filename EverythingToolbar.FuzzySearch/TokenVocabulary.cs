@@ -82,6 +82,50 @@ namespace EverythingToolbar.FuzzySearch
             }
         }
 
+        public IReadOnlyList<VocabularyEntry> CompoundsByFrequency()
+        {
+            lock (_gate)
+            {
+                return _compoundFrequency
+                    .Select(kvp => new VocabularyEntry(kvp.Key, _compoundDisplay[kvp.Key], kvp.Value, IsCompound: true))
+                    .OrderByDescending(e => e.Frequency)
+                    .ToList();
+            }
+        }
+
+        /// <summary>Replaces all content in-place (used to load the persisted cache).</summary>
+        public void Restore(IEnumerable<VocabularyEntry> words, IEnumerable<VocabularyEntry> compounds)
+        {
+            lock (_gate)
+            {
+                _wordFrequency.Clear();
+                _wordDisplay.Clear();
+                _compoundFrequency.Clear();
+                _compoundDisplay.Clear();
+                foreach (var entry in words)
+                {
+                    _wordFrequency[entry.Normalized] = entry.Frequency;
+                    _wordDisplay[entry.Normalized] = entry.Display;
+                }
+                foreach (var entry in compounds)
+                {
+                    _compoundFrequency[entry.Normalized] = entry.Frequency;
+                    _compoundDisplay[entry.Normalized] = entry.Display;
+                }
+            }
+        }
+
+        public void Clear()
+        {
+            lock (_gate)
+            {
+                _wordFrequency.Clear();
+                _wordDisplay.Clear();
+                _compoundFrequency.Clear();
+                _compoundDisplay.Clear();
+            }
+        }
+
         public IReadOnlyList<VocabularyEntry> WordsByFrequency()
         {
             lock (_gate)

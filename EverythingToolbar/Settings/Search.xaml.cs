@@ -21,8 +21,25 @@ namespace EverythingToolbar.Settings
         private readonly EverythingClientRouter _everythingClient =
             Ioc.Default.GetRequiredService<EverythingClientRouter>();
         private readonly AliasStore _aliasStore = Ioc.Default.GetRequiredService<AliasStore>();
+        private readonly VocabularyRefresher _vocabularyRefresher =
+            Ioc.Default.GetRequiredService<VocabularyRefresher>();
 
         public bool IsResultOmissionsSupported => _everythingClient.IsPipeClientActive;
+
+        private string _vocabularyStatusText = "";
+
+        /// <summary>Human-readable spelling-vocabulary readiness for the settings page.</summary>
+        public string VocabularyStatusText
+        {
+            get => _vocabularyStatusText;
+            private set
+            {
+                if (_vocabularyStatusText == value)
+                    return;
+                _vocabularyStatusText = value;
+                OnPropertyChanged(nameof(VocabularyStatusText));
+            }
+        }
 
         public List<KeyValuePair<string, FocusBehavior>> FocusBehaviorItems { get; } =
         [
@@ -31,12 +48,73 @@ namespace EverythingToolbar.Settings
             new(Properties.Resources.FocusBehaviorRepeatWithSearch, FocusBehavior.RepeatWithSearch),
         ];
 
+        /// <summary>Distance levels offered for the index and long-word correction settings.</summary>
+        public List<int> DistanceItems { get; } =
+            Enumerable.Range(1, EditDistancePolicy.MaxSupportedDictionaryEditDistance).ToList();
+
+        /// <summary>
+        /// Long-word correction distance can never exceed the index distance (SymSpell's Lookup
+        /// throws above the built maximum), so the selector offers 1..indexDistance only and is
+        /// re-clamped whenever the index distance shrinks.
+        /// </summary>
+        public List<int> LongWordDistanceItems =>
+            Enumerable
+                .Range(
+                    1,
+                    Math.Min(
+                        Settings.TypoMaxDictionaryEditDistance,
+                        EditDistancePolicy.MaxSupportedDictionaryEditDistance
+                    )
+                )
+                .ToList();
+
+        /// <summary>Sane long-word threshold options; anything outside is clamped by EditDistancePolicy.</summary>
+        public List<int> LongWordThresholdItems { get; } = Enumerable.Range(6, 10).ToList();
+
         public Search()
         {
             InitializeComponent();
             DataContext = this;
             Settings.PropertyChanged += OnSettingsChanged;
             LoadAliases();
+            _vocabularyRefresher.PropertyChanged += OnVocabularyStateChanged;
+            UpdateVocabularyStatus();
+        }
+
+        private void OnVocabularyStateChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName is nameof(VocabularyRefresher.State) or nameof(VocabularyRefresher.WordCount))
+            {
+                UpdateVocabularyStatus();
+            }
+        }
+
+        private void UpdateVocabularyStatus()
+        {
+            VocabularyStatusText = _vocabularyRefresher.State switch
+            {
+                TypoVocabularyState.Ready => string.Format(
+                    Properties.Resources.SettingsVocabStateReadyFormat,
+                    _vocabularyRefresher.WordCount.ToString("N0")
+                ),
+                TypoVocabularyState.Building => Properties.Resources.SettingsVocabStateBuilding,
+                TypoVocabularyState.Refreshing => Properties.Resources.SettingsVocabStateRefreshing,
+                TypoVocabularyState.Failed => Properties.Resources.SettingsVocabStateFailed,
+                _ => Properties.Resources.SettingsVocabStateDisabled,
+            };
+        }
+
+        private void OnRefreshVocabularyClicked(object sender, RoutedEventArgs e)
+        {
+            // RequestRefresh is coalesced and runs off the UI thread; repeated clicks are safe.
+            _vocabularyRefresher.RequestRefresh();
+        }
+
+        private void OnRebuildSpellingIndexClicked(object sender, RoutedEventArgs e)
+        {
+            // RequestIndexRebuild is coalesced, keeps the vocabulary and old index, and runs off
+            // the UI thread; repeated clicks are safe.
+            _vocabularyRefresher.RequestIndexRebuild();
         }
 
         private void LoadAliases()
@@ -53,11 +131,22 @@ namespace EverythingToolbar.Settings
             {
                 OnPropertyChanged(nameof(IsResultOmissionsSupported));
             }
+            else if (e.PropertyName == nameof(ISettings.TypoMaxDictionaryEditDistance))
+            {
+                OnPropertyChanged(nameof(LongWordDistanceItems));
+                if (Settings.TypoLongWordMaxEditDistance > Settings.TypoMaxDictionaryEditDistance)
+                {
+                    // The long-word distance must stay within the index distance; clamp so the
+                    // value the user sees is the value the planner uses.
+                    Settings.TypoLongWordMaxEditDistance = Settings.TypoMaxDictionaryEditDistance;
+                }
+            }
         }
 
         private void OnUnloaded(object sender, RoutedEventArgs e)
         {
             Settings.PropertyChanged -= OnSettingsChanged;
+            _vocabularyRefresher.PropertyChanged -= OnVocabularyStateChanged;
         }
 
         private void OnClearHistoryClicked(object sender, RoutedEventArgs e)

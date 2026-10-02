@@ -2102,6 +2102,24 @@ namespace EverythingToolbar.Properties {
         }
 
         /// <summary>
+        ///   Looks up a localized string similar to Search settings.
+        /// </summary>
+        public static string SettingsSearchSettings {
+            get {
+                return ResourceManager.GetString("SettingsSearchSettings", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Type to filter all settings.
+        /// </summary>
+        public static string SettingsSearchSettingsHelp {
+            get {
+                return ResourceManager.GetString("SettingsSearchSettingsHelp", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to {0}.
         /// </summary>
         public static string SettingsTypoTolerantSearch {
@@ -2152,6 +2170,150 @@ namespace EverythingToolbar.Properties {
         public static string ResultsShowingResultsFor {
             get {
                 return ResourceManager.GetString("ResultsShowingResultsFor", resourceCulture);
+            }
+        }
+
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0}.
+        /// </summary>
+        public static string SettingsVocabStateBuilding {
+            get {
+                return ResourceManager.GetString("SettingsVocabStateBuilding", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0}.
+        /// </summary>
+        public static string SettingsVocabStateReadyFormat {
+            get {
+                return ResourceManager.GetString("SettingsVocabStateReadyFormat", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0}.
+        /// </summary>
+        public static string SettingsVocabStateDisabled {
+            get {
+                return ResourceManager.GetString("SettingsVocabStateDisabled", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0}.
+        /// </summary>
+        public static string SettingsVocabStateRefreshing {
+            get {
+                return ResourceManager.GetString("SettingsVocabStateRefreshing", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0}.
+        /// </summary>
+        public static string SettingsVocabStateFailed {
+            get {
+                return ResourceManager.GetString("SettingsVocabStateFailed", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to {0}.
+        /// </summary>
+        public static string SettingsVocabRefreshNow {
+            get {
+                return ResourceManager.GetString("SettingsVocabRefreshNow", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Advanced typo matching.
+        /// </summary>
+        public static string SettingsTypoAdvancedHeader {
+            get {
+                return ResourceManager.GetString("SettingsTypoAdvancedHeader", resourceCulture);
+            }
+        }
+
+
+        /// <summary>
+        ///   Looks up a localized string similar to Maximum spelling index distance.
+        /// </summary>
+        public static string SettingsTypoMaxIndexDistance {
+            get {
+                return ResourceManager.GetString("SettingsTypoMaxIndexDistance", resourceCulture);
+            }
+        }
+
+
+        /// <summary>
+        ///   Looks up a localized string similar to SettingsTypoMaxIndexDistanceHelp.
+        /// </summary>
+        public static string SettingsTypoMaxIndexDistanceHelp {
+            get {
+                return ResourceManager.GetString("SettingsTypoMaxIndexDistanceHelp", resourceCulture);
+            }
+        }
+
+
+        /// <summary>
+        ///   Looks up a localized string similar to Long-word correction distance.
+        /// </summary>
+        public static string SettingsTypoLongWordDistance {
+            get {
+                return ResourceManager.GetString("SettingsTypoLongWordDistance", resourceCulture);
+            }
+        }
+
+
+        /// <summary>
+        ///   Looks up a localized string similar to SettingsTypoLongWordDistanceHelp.
+        /// </summary>
+        public static string SettingsTypoLongWordDistanceHelp {
+            get {
+                return ResourceManager.GetString("SettingsTypoLongWordDistanceHelp", resourceCulture);
+            }
+        }
+
+
+        /// <summary>
+        ///   Looks up a localized string similar to Allow larger distance from.
+        /// </summary>
+        public static string SettingsTypoLongWordThreshold {
+            get {
+                return ResourceManager.GetString("SettingsTypoLongWordThreshold", resourceCulture);
+            }
+        }
+
+
+        /// <summary>
+        ///   Looks up a localized string similar to SettingsTypoLongWordThresholdHelp.
+        /// </summary>
+        public static string SettingsTypoLongWordThresholdHelp {
+            get {
+                return ResourceManager.GetString("SettingsTypoLongWordThresholdHelp", resourceCulture);
+            }
+        }
+
+
+        /// <summary>
+        ///   Looks up a localized string similar to characters.
+        /// </summary>
+        public static string SettingsTypoLongWordThresholdUnit {
+            get {
+                return ResourceManager.GetString("SettingsTypoLongWordThresholdUnit", resourceCulture);
+            }
+        }
+
+
+        /// <summary>
+        ///   Looks up a localized string similar to Rebuild spelling index.
+        /// </summary>
+        public static string SettingsTypoRebuildIndex {
+            get {
+                return ResourceManager.GetString("SettingsTypoRebuildIndex", resourceCulture);
             }
         }
 

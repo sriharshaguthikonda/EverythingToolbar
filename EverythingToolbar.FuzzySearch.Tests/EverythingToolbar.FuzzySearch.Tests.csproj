@@ -4,6 +4,9 @@
     <RootNamespace>EverythingToolbar.FuzzySearch.Tests</RootNamespace>
     <SignAssembly>false</SignAssembly>
     <IsPackable>false</IsPackable>
+    <!-- IDE0005 false-positives on env-gated benchmark/integration files (usings that ARE used
+         only inside FUZZY_BENCH/LIVE_EVERYTHING paths); CI msbuild promotes IDE0005 to error. -->
+    <NoWarn>$(NoWarn);IDE0005</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
@@ -30,5 +33,6 @@
   <ItemGroup>
     <ProjectReference Include="..\EverythingToolbar.FuzzySearch\EverythingToolbar.FuzzySearch.csproj" />
     <ProjectReference Include="..\EverythingToolbar.App\EverythingToolbar.App.csproj" />
+    <ProjectReference Include="..\EverythingToolbar\EverythingToolbar.csproj" />
   </ItemGroup>
 </Project>

@@ -7,6 +7,9 @@ namespace EverythingToolbar.FuzzySearch
 
     public interface ITypoCandidateProvider
     {
+        /// <summary>Increments whenever the underlying index changes; caches keyed to it re-plan.</summary>
+        int IndexVersion { get; }
+
         /// <summary>
         /// Returns spelling candidates for <paramref name="term"/>, best first. Never returns the
         /// term itself. Must be efficient (indexed lookup, no linear scan over paths).

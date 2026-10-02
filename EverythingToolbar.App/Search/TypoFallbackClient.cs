@@ -25,7 +25,9 @@ namespace EverythingToolbar.App.Search
         private readonly IEverythingClient _inner;
         private readonly FallbackQueryPlanner _planner;
         private readonly ISettings _settings;
-        private readonly ConcurrentDictionary<SearchQuery, FallbackPlan?> _plans = new();
+        private readonly ConcurrentDictionary<SearchQuery, PlanEntry> _plans = new();
+
+        private readonly record struct PlanEntry(FallbackPlan? Plan, int IndexVersion);
 
         public TypoFallbackClient(IEverythingClient inner, FallbackQueryPlanner planner, ISettings settings)
         {
@@ -140,13 +142,28 @@ namespace EverythingToolbar.App.Search
             if (_plans.Count >= MaxCachedPlans)
                 _plans.Clear();
 
-            return _plans.GetOrAdd(query, q => _planner.Plan(q.SearchText, cancellationToken));
+            var currentVersion = _planner.IndexVersion;
+            if (_plans.TryGetValue(query, out var cached) && cached.IndexVersion == currentVersion)
+                return cached.Plan;
+
+            // Re-plan when the candidate index changed (e.g. the vocabulary became ready after a
+            // first zero-result lookup): a cached null plan must not outlive the index version it
+            // was planned against. The plan is cached under the version read AFTER planning:
+            // a cold plan can build the index and bump its version, and caching the pre-plan
+            // version would make Resolve() discard the plan immediately and fall back to the
+            // raw query (discovered in live elevated testing: count>0 but zero range rows).
+            var plan = _planner.Plan(query.SearchText, cancellationToken);
+            _plans[query] = new PlanEntry(plan, _planner.IndexVersion);
+            return plan;
         }
 
         private SearchQuery Resolve(SearchQuery rawQuery)
         {
-            return _plans.TryGetValue(rawQuery, out var plan) && plan is not null
-                ? WithCorrectedText(rawQuery, plan)
+            return
+                _plans.TryGetValue(rawQuery, out var entry)
+                && entry.Plan is not null
+                && entry.IndexVersion == _planner.IndexVersion
+                ? WithCorrectedText(rawQuery, entry.Plan)
                 : rawQuery;
         }
 

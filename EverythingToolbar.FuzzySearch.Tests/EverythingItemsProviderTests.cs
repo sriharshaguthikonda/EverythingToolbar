@@ -19,7 +19,7 @@ namespace EverythingToolbar.FuzzySearch.Tests
         {
             var client = new FakeEverythingClient
             {
-                ResultsToReturn = new List<SearchResult>
+                Results = new List<SearchResult>
                 {
                     Result(@"C:\Tools\Neuroscience_Project\notes.txt"),
                     Result(@"C:\Work\ollama\ollama.exe"),
@@ -63,7 +63,7 @@ namespace EverythingToolbar.FuzzySearch.Tests
         [Fact]
         public async Task FetchRange_WorksWithoutCallback()
         {
-            var client = new FakeEverythingClient { ResultsToReturn = new List<SearchResult> { Result(@"C:\a.txt") } };
+            var client = new FakeEverythingClient { Results = new List<SearchResult> { Result(@"C:\a.txt") } };
             var provider = new EverythingItemsProvider(
                 client,
                 new EverythingToolbar.Core.Search.SearchQuery("a", default, false, false, false, false, false)
