@@ -311,6 +311,7 @@ namespace EverythingToolbar
         {
             // Recomputed on every open (same pattern as the Edit menu) so the rename item always
             // reflects the live selection.
+            ToolsBatchRenameMenuItem.IsEnabled = ResultsView.GetSelectedResults().Count > 0;
             ToolsAdvancedRenameMenuItem.IsEnabled = ResultsView.GetSelectedResults().Count > 0;
         }
 
@@ -318,6 +319,20 @@ namespace EverythingToolbar
         {
             // No arguments: opens/activates Everything's own main search window.
             _everythingLauncher.Launch();
+        }
+
+        private void OnBatchRenameClick(object sender, RoutedEventArgs e)
+        {
+            var paths = ResultsView
+                .GetSelectedResults()
+                .Where(result => result is not null)
+                .Select(result => result!.FullPathAndFileName)
+                .ToList();
+            if (paths.Count == 0)
+                return;
+
+            var dialog = new App.BatchRenameDialog(paths) { Owner = Window.GetWindow(this) };
+            dialog.ShowDialog();
         }
 
         private void OnAdvancedRenameClick(object sender, RoutedEventArgs e)

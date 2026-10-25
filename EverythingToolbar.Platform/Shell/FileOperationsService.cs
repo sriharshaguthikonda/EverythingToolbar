@@ -80,6 +80,104 @@ namespace EverythingToolbar.Platform.Shell
             Perform(OperationKind.Rename, new[] { path }, destinationFolder: newName);
 
         /// <summary>
+        /// Renames many items in ONE shell IFileOperation batch: every RenameItem op is queued
+        /// first (same queue pattern as Files Community's QueueRenameOperation), then a single
+        /// PerformOperations runs them, so the shell's native conflict/progress UI handles the
+        /// whole set at once. Returns true when the batch completed without failure and without
+        /// user abort; individual queue failures are logged and surfaced via the shell.
+        /// </summary>
+        public bool RenameMany(IEnumerable<(string Path, string NewName)> items)
+        {
+            try
+            {
+                if (Thread.CurrentThread.GetApartmentState() != ApartmentState.STA)
+                {
+                    Logger.Error("Shell file operations require an STA thread; operation skipped.");
+                    return false;
+                }
+
+                var renames = DeduplicateRenames(items);
+                if (renames.Count == 0)
+                    return true; // Nothing to do counts as success.
+
+                IFileOperation operation = (IFileOperation)new CFileOperation();
+                var sourcePointers = new List<IntPtr>(renames.Count);
+                try
+                {
+                    // FOF_ALLOWUNDO keeps the renames undoable through Explorer's Edit > Undo.
+                    var hrFlags = operation.SetOperationFlags(FOF_DEFAULT_FOR_MOVE);
+                    if (hrFlags < 0)
+                    {
+                        Logger.Error("IFileOperation.SetOperationFlags failed with HRESULT 0x{0:X8}.", hrFlags);
+                        return false;
+                    }
+
+                    foreach (var (path, newName) in renames)
+                    {
+                        if (!CreateShellItem(path, out var itemPointer))
+                            continue;
+
+                        sourcePointers.Add(itemPointer);
+                        var hr = operation.RenameItem(itemPointer, newName, IntPtr.Zero);
+                        if (hr < 0)
+                            Logger.Error("IFileOperation rename queue failed for {0} with HRESULT 0x{1:X8}.", path, hr);
+                    }
+
+                    if (sourcePointers.Count == 0)
+                        return false;
+
+                    var hrPerform = operation.PerformOperations();
+                    if (hrPerform < 0)
+                    {
+                        Logger.Error("IFileOperation.PerformOperations failed with HRESULT 0x{0:X8}.", hrPerform);
+                        return false;
+                    }
+
+                    if (operation.GetAnyOperationsAborted(out var aborted) >= 0 && aborted != 0)
+                    {
+                        Logger.Info("The user canceled the shell file operation.");
+                        return false;
+                    }
+
+                    return true;
+                }
+                finally
+                {
+                    foreach (var pointer in sourcePointers)
+                    {
+                        if (pointer != IntPtr.Zero)
+                            Marshal.Release(pointer);
+                    }
+                    Marshal.ReleaseComObject(operation);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Failed to perform the shell batch rename.");
+                return false;
+            }
+        }
+
+        private static List<(string Path, string NewName)> DeduplicateRenames(
+            IEnumerable<(string Path, string NewName)> items
+        )
+        {
+            var renames = new List<(string, string)>();
+            if (items == null)
+                return renames;
+
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (path, newName) in items)
+            {
+                if (string.IsNullOrWhiteSpace(path) || string.IsNullOrWhiteSpace(newName) || !seen.Add(path))
+                    continue;
+                renames.Add((path, newName));
+            }
+
+            return renames;
+        }
+
+        /// <summary>
         /// Puts the given paths on the clipboard as a file drop list marked for copy.
         /// Implemented with System.Windows.Clipboard (WPF DataObject, converted to OLE by WPF):
         /// CF_HDROP + "Preferred DropEffect" = DROPEFFECT_COPY.
