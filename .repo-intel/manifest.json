@@ -37,11 +37,11 @@
     ]
   },
   "sourceState": {
-    "commit": "c66ab244c5108607e45b29e90a83fab87ba4c15e",
+    "commit": "56b72a9e18d0f05eeb85f6218da46d35fcc2529e",
     "branch": "fix/typo-vocabulary-bootstrap",
     "dirty": false,
-    "generatedForCommit": "c66ab244c5108607e45b29e90a83fab87ba4c15e",
-    "sourceFingerprint": "30fdc307bd9dc7a9b749cb8876263f6875284343275a263e52a4124a07821f96"
+    "generatedForCommit": "56b72a9e18d0f05eeb85f6218da46d35fcc2529e",
+    "sourceFingerprint": "12ad622119a35dbfc3885c25ee21bd659f26a02303597af72ed8070bbae5208c"
   },
   "policy": {
     "profile": "basic",
@@ -53,7 +53,7 @@
     "allowGraphPilots": false,
     "runOnPush": false
   },
-  "generatedAt": "2026-09-30T00:00:27.007113Z",
+  "generatedAt": "2026-10-25T15:10:10.681425Z",
   "toolRuns": [
     {
       "id": "repomix.basic",
