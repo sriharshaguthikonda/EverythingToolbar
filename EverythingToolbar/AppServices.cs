@@ -100,6 +100,7 @@ namespace EverythingToolbar
             return services
                 .AddSingleton<WindowsPolicy>()
                 .AddSingleton<ThemeService>()
+                .AddSingleton<EverythingToolbar.Platform.Shell.ShellContextMenuService>()
                 .AddSingleton<StartMenuSearchInterceptor>()
                 .AddSingleton<GlobalShortcutListener>()
                 .AddSingleton<SearchWindow>()

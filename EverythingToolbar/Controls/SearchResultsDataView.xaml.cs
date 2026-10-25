@@ -4,9 +4,12 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Media;
 using CommunityToolkit.Mvvm.DependencyInjection;
 using EverythingToolbar.App.Search;
 using EverythingToolbar.Core.Data;
+using EverythingToolbar.Platform.Shell;
 using EverythingToolbar.Search;
 
 namespace EverythingToolbar.Controls
@@ -29,6 +32,8 @@ namespace EverythingToolbar.Controls
         private readonly SearchSession _session = Ioc.Default.GetRequiredService<SearchSession>();
         private readonly SearchState _searchState = Ioc.Default.GetRequiredService<SearchState>();
         private readonly SearchCommands _commands = Ioc.Default.GetRequiredService<SearchCommands>();
+        private readonly ShellContextMenuService _shellContextMenu =
+            Ioc.Default.GetRequiredService<ShellContextMenuService>();
 
         public SearchResultsDataView()
         {
@@ -114,8 +119,85 @@ namespace EverythingToolbar.Controls
 
         private void OnListKeyDown(object sender, KeyEventArgs e)
         {
+            if (IsContextMenuKey(e) && Keyboard.Modifiers is ModifierKeys.None or ModifierKeys.Shift)
+            {
+                ShowShellContextMenuAtSelectedResult();
+                e.Handled = true;
+                return;
+            }
+
             if (_commands.TranslateResultsGesture(e.Key, e.SystemKey, Keyboard.Modifiers, fromSearchBox: false))
                 e.Handled = true;
+        }
+
+        private void OnListRightButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (Keyboard.Modifiers != ModifierKeys.None)
+                return;
+
+            var item = FindListViewItem(e.OriginalSource as DependencyObject);
+            if (item == null)
+                return;
+
+            var clicked = ResultsListView.ItemContainerGenerator.ItemFromContainer(item) as SearchResult;
+            var clickedIsSelected = clicked != null && ResultsListView.SelectedItems.Contains(clicked);
+            if (
+                ShellContextMenuSelection.ShouldReselectOnRightClick(
+                    clickedIsSelected,
+                    ResultsListView.SelectedItems.Count
+                )
+            )
+            {
+                ResultsListView.UnselectAll();
+                if (clicked != null)
+                    ResultsListView.SelectedItems.Add(clicked);
+            }
+
+            var screenPoint = ResultsListView.PointToScreen(e.GetPosition(ResultsListView));
+            ShowShellContextMenu(screenPoint);
+            e.Handled = true;
+        }
+
+        private static bool IsContextMenuKey(KeyEventArgs e) =>
+            e.Key == Key.Apps || (e.Key == Key.System && e.SystemKey == Key.F10);
+
+        private void ShowShellContextMenuAtSelectedResult()
+        {
+            if (ResultsListView.SelectedItem == null)
+                return;
+
+            if (
+                ResultsListView.ItemContainerGenerator.ContainerFromItem(ResultsListView.SelectedItem)
+                is FrameworkElement container
+            )
+            {
+                var center = new Point(container.ActualWidth / 2, container.ActualHeight / 2);
+                ShowShellContextMenu(container.PointToScreen(center));
+            }
+        }
+
+        private void ShowShellContextMenu(Point screenPoint)
+        {
+            var paths = ShellContextMenuSelection.BuildPathList(SelectedResults());
+            if (paths.Count == 0)
+                return;
+
+            var window = Window.GetWindow(this);
+            var handle = window == null ? IntPtr.Zero : new WindowInteropHelper(window).Handle;
+            _shellContextMenu.ShowMenu(handle, paths, (int)screenPoint.X, (int)screenPoint.Y);
+        }
+
+        private IEnumerable<SearchResult?> SelectedResults()
+        {
+            foreach (var item in ResultsListView.SelectedItems)
+                yield return item as SearchResult;
+        }
+
+        private static ListViewItem? FindListViewItem(DependencyObject? source)
+        {
+            while (source != null && source is not ListViewItem)
+                source = source is Visual ? VisualTreeHelper.GetParent(source) : LogicalTreeHelper.GetParent(source);
+            return source as ListViewItem;
         }
     }
 }
