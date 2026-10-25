@@ -31,6 +31,7 @@
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto" />
       <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
       <RowDefinition Height="*" />
       <RowDefinition Height="Auto" />
     </Grid.RowDefinitions>
@@ -40,6 +41,15 @@
       Background="{DynamicResource SearchWindowBackground}"
       Foreground="{DynamicResource SearchResultFileName}">
       <MenuItem Header="File">
+        <MenuItem
+          Click="OnNewTabClick"
+          Header="New Tab"
+          InputGestureText="Ctrl+T" />
+        <MenuItem
+          Click="OnCloseTabClick"
+          Header="Close Tab"
+          InputGestureText="Ctrl+W" />
+        <Separator />
         <MenuItem
           Click="OnNewWindowClick"
           Header="New Window"
@@ -88,7 +98,98 @@
       </MenuItem>
     </Menu>
 
-    <Grid Grid.Row="1" Margin="8 8 8 0">
+    <Border
+      x:Name="TabStrip"
+      Grid.Row="1"
+      Margin="8 4 8 0"
+      Background="Transparent"
+      Visibility="Collapsed">
+      <Border.Style>
+        <Style TargetType="Border">
+          <Setter Property="Visibility" Value="Collapsed" />
+          <Style.Triggers>
+            <DataTrigger Binding="{Binding Source={markup:Service {x:Type appsearch:SearchTabManager}}, Path=IsTabStripVisible}" Value="True">
+              <Setter Property="Visibility" Value="Visible" />
+            </DataTrigger>
+          </Style.Triggers>
+        </Style>
+      </Border.Style>
+      <ItemsControl
+        x:Name="TabHeaders"
+        Background="Transparent"
+        ItemsSource="{Binding Source={markup:Service {x:Type appsearch:SearchTabManager}}, Path=Tabs}"
+        MouseLeftButtonDown="OnTabStripMouseDown">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Orientation="Horizontal" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <Border
+              x:Name="TabHeaderBorder"
+              Margin="0 0 2 0"
+              Padding="10 4 4 4"
+              Background="Transparent"
+              CornerRadius="4"
+              Cursor="Hand"
+              MouseLeftButtonDown="OnTabHeaderMouseDown"
+              Tag="{Binding}">
+              <Border.Style>
+                <Style TargetType="Border">
+                  <Setter Property="Background" Value="Transparent" />
+                  <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                      <Setter Property="Background" Value="{DynamicResource TabBarButtonBackgroundHover}" />
+                    </Trigger>
+                    <DataTrigger Binding="{Binding IsActive}" Value="True">
+                      <Setter Property="Background" Value="{DynamicResource TabBarButtonBackgroundActive}" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </Border.Style>
+              <StackPanel Orientation="Horizontal">
+                <TextBlock
+                  MaxWidth="160"
+                  Margin="0 0 6 0"
+                  VerticalAlignment="Center"
+                  Foreground="{DynamicResource SearchResultFileName}"
+                  Text="{Binding DisplayName}"
+                  TextTrimming="CharacterEllipsis" />
+                <Button
+                  Click="OnTabCloseClick"
+                  Content="&#xE711;"
+                  FontFamily="Segoe MDL2 Assets"
+                  FontSize="10"
+                  Tag="{Binding}">
+                  <Button.Style>
+                    <Style TargetType="Button">
+                      <Setter Property="Opacity" Value="0" />
+                      <Setter Property="Background" Value="Transparent" />
+                      <Setter Property="BorderThickness" Value="0" />
+                      <Setter Property="Foreground" Value="{DynamicResource SearchResultFileName}" />
+                      <Setter Property="VerticalAlignment" Value="Center" />
+                      <Setter Property="Padding" Value="4 2 4 2" />
+                      <Setter Property="Cursor" Value="Hand" />
+                      <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                          <Setter Property="Opacity" Value="1" />
+                        </Trigger>
+                        <DataTrigger Binding="{Binding IsActive}" Value="True">
+                          <Setter Property="Opacity" Value="0.7" />
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Button.Style>
+                </Button>
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </Border>
+
+    <Grid Grid.Row="2" Margin="8 8 8 0">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="*" />
         <ColumnDefinition Width="Auto" />
@@ -107,7 +208,7 @@
         SelectedFilter="{Binding Source={markup:Service {x:Type appsearch:SearchState}}, Path=Filter, Mode=TwoWay}" />
     </Grid>
 
-    <Grid Grid.Row="2" Margin="8 8 8 0">
+    <Grid Grid.Row="3" Margin="8 8 8 0">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="*" />
         <ColumnDefinition Width="Auto" />
@@ -123,7 +224,7 @@
 
     <Border
       x:Name="StatusBar"
-      Grid.Row="3"
+      Grid.Row="4"
       Padding="8 4 8 4"
       Background="{DynamicResource SearchWindowBackground}"
       BorderBrush="{DynamicResource TabBarBottomBorder}"

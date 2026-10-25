@@ -16,10 +16,26 @@ namespace EverythingToolbar
         private readonly SearchSession _session = Ioc.Default.GetRequiredService<SearchSession>();
         private readonly SearchCommands _commands = Ioc.Default.GetRequiredService<SearchCommands>();
         private readonly SearchWindowController _controller = Ioc.Default.GetRequiredService<SearchWindowController>();
+        private readonly App.Search.SearchTabManager _tabManager =
+            Ioc.Default.GetRequiredService<App.Search.SearchTabManager>();
 
         public ExpandedSearchWindow()
         {
             InitializeComponent();
+            Loaded += OnWindowLoaded;
+            Closed += OnWindowClosed;
+        }
+
+        private void OnWindowLoaded(object sender, RoutedEventArgs e)
+        {
+            // Idempotent: the first expanded window after app start loads tabs.json (single empty
+            // tab on fresh install); later windows share the already-populated manager singleton.
+            _tabManager.Load();
+        }
+
+        private void OnWindowClosed(object? sender, EventArgs e)
+        {
+            _tabManager.Save();
         }
 
         public void FocusSearchBox()
@@ -49,6 +65,27 @@ namespace EverythingToolbar
             if (modifiers == ModifierKeys.Control && e.Key == Key.P)
             {
                 TogglePreview();
+                e.Handled = true;
+                return;
+            }
+
+            if (modifiers == ModifierKeys.Control && e.Key == Key.T)
+            {
+                _tabManager.NewTab();
+                e.Handled = true;
+                return;
+            }
+
+            if (modifiers == ModifierKeys.Control && e.Key == Key.W)
+            {
+                CloseActiveTab();
+                e.Handled = true;
+                return;
+            }
+
+            if (modifiers == ModifierKeys.Control && e.Key == Key.Tab)
+            {
+                _tabManager.CycleNext();
                 e.Handled = true;
                 return;
             }
@@ -97,6 +134,41 @@ namespace EverythingToolbar
         {
             var window = new ExpandedSearchWindow();
             window.Show();
+        }
+
+        private void OnNewTabClick(object sender, RoutedEventArgs e)
+        {
+            _tabManager.NewTab();
+        }
+
+        private void OnCloseTabClick(object sender, RoutedEventArgs e)
+        {
+            CloseActiveTab();
+        }
+
+        private void CloseActiveTab()
+        {
+            _tabManager.CloseTab(_tabManager.ActiveIndex);
+        }
+
+        private void OnTabHeaderMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is FrameworkElement { DataContext: App.Search.SearchTab tab })
+                _tabManager.SwitchTo(_tabManager.Tabs.IndexOf(tab));
+        }
+
+        private void OnTabStripMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            // Double-click on empty strip background opens a new tab (clicks on tab headers are
+            // handled by OnTabHeaderMouseDown and never reach the ItemsControl background).
+            if (ReferenceEquals(e.OriginalSource, TabHeaders) && e.ClickCount == 2)
+                _tabManager.NewTab();
+        }
+
+        private void OnTabCloseClick(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement { Tag: App.Search.SearchTab tab })
+                _tabManager.CloseTab(_tabManager.Tabs.IndexOf(tab));
         }
 
         private void OnCloseClick(object sender, RoutedEventArgs e)

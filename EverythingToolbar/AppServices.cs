@@ -87,6 +87,10 @@ namespace EverythingToolbar
                 .AddSingleton<EverythingFilterProvider>()
                 .AddSingleton<FilterProvider>()
                 .AddSingleton<SearchState>()
+                .AddSingleton<SearchTabManager>(sp => new SearchTabManager(
+                    sp.GetRequiredService<SearchState>(),
+                    sp.GetRequiredService<FilterProvider>()
+                ))
                 .AddSingleton<SearchSession>()
                 .AddSingleton<SearchCommands>()
                 .AddSingleton<CustomActionService>()
