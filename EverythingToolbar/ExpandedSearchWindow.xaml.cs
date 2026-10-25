@@ -10,6 +10,7 @@ using System.Windows.Threading;
 using CommunityToolkit.Mvvm.DependencyInjection;
 using EverythingToolbar.App;
 using EverythingToolbar.App.Helpers;
+using EverythingToolbar.Core.Data;
 using EverythingToolbar.Core.Search;
 using EverythingToolbar.Platform.Shell;
 using EverythingToolbar.Search;
@@ -245,6 +246,65 @@ namespace EverythingToolbar
         private void OnEditDeleteClick(object sender, RoutedEventArgs e)
         {
             _editOperations.Delete(ResultsView.GetSelectedResults());
+        }
+
+        private void OnSortBySubmenuOpened(object sender, RoutedEventArgs e)
+        {
+            // Rebuild on every open (same pattern as the Bookmarks/Sessions menus) so the
+            // checkmarks always reflect the current effective sort, which can also change
+            // from result-list header clicks. ResetSort stays internal to header cycling;
+            // there is intentionally no "default" reset item here.
+            var currentSortBy = _searchState.EffectiveSortBy;
+            var currentDescending = _searchState.EffectiveIsSortDescending;
+
+            SortByMenu.Items.Clear();
+            foreach (var (sortBy, displayName) in SortMenuItems.Items)
+            {
+                var item = new MenuItem
+                {
+                    Header = displayName,
+                    IsCheckable = true,
+                    IsChecked = sortBy == currentSortBy,
+                    Tag = sortBy,
+                };
+                item.Click += OnSortByItemClick;
+                SortByMenu.Items.Add(item);
+            }
+
+            SortByMenu.Items.Add(new Separator());
+            SortByMenu.Items.Add(
+                new MenuItem
+                {
+                    Header = "Ascending",
+                    IsCheckable = true,
+                    IsChecked = !currentDescending,
+                    Tag = false,
+                }
+            );
+            SortByMenu.Items.Add(
+                new MenuItem
+                {
+                    Header = "Descending",
+                    IsCheckable = true,
+                    IsChecked = currentDescending,
+                    Tag = true,
+                }
+            );
+        }
+
+        private void OnSortByItemClick(object sender, RoutedEventArgs e)
+        {
+            // Tag carries either the SortBy field (sort items) or the descending flag
+            // (Ascending/Descending items); the other dimension is kept at its current value.
+            switch ((sender as FrameworkElement)?.Tag)
+            {
+                case SortBy sortBy:
+                    _searchState.SetSort(sortBy, _searchState.EffectiveIsSortDescending);
+                    break;
+                case bool descending:
+                    _searchState.SetSort(_searchState.EffectiveSortBy, descending);
+                    break;
+            }
         }
 
         private void OnToolsSubmenuOpened(object sender, RoutedEventArgs e)

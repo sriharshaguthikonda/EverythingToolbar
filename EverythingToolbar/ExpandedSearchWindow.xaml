@@ -113,6 +113,13 @@
       </MenuItem>
       <MenuItem Header="View">
         <MenuItem
+          x:Name="SortByMenu"
+          Header="Sort By"
+          SubmenuOpened="OnSortBySubmenuOpened">
+          <MenuItem Header="(no sort items)" IsEnabled="False" />
+        </MenuItem>
+        <Separator />
+        <MenuItem
           x:Name="FolderSidebarMenuItem"
           Click="OnToggleFolderSidebarClick"
           Header="Toggle Folder Sidebar"
