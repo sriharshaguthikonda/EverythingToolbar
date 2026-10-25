@@ -300,7 +300,7 @@
       <Grid>
         <StackPanel HorizontalAlignment="Left" Orientation="Horizontal">
           <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource SearchResultPath}">
-            <Run Text="{Binding Source={markup:Service {x:Type appsearch:SearchSession}}, Path=TotalCount, Mode=OneWay, Converter={c:SearchResultsCountConverter}}" />
+            <Run Text="{Binding Source={markup:Service {x:Type appsearch:SearchSession}}, Path=StatusCountText, Mode=OneWay}" />
           </TextBlock>
           <TextBlock
             VerticalAlignment="Center"

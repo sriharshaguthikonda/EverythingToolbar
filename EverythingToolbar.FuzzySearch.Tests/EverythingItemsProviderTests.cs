@@ -61,6 +61,41 @@ namespace EverythingToolbar.FuzzySearch.Tests
         }
 
         [Fact]
+        public async Task FetchCount_ReportsElapsedTimeToCountCallback()
+        {
+            var client = new FakeEverythingClient { CountToReturn = 7 };
+            var elapsed = new List<int>();
+            var provider = new EverythingItemsProvider(
+                client,
+                new EverythingToolbar.Core.Search.SearchQuery("notes", default, false, false, false, false, false),
+                onCountTimed: ms => elapsed.Add(ms)
+            );
+
+            var count = await provider.FetchCount(256, isAsync: false, System.Threading.CancellationToken.None);
+
+            Assert.Equal(7, count);
+            var single = Assert.Single(elapsed);
+            Assert.True(single >= 0);
+        }
+
+        [Fact]
+        public async Task FetchCount_AsyncReportsElapsedTimeToCountCallback()
+        {
+            var client = new FakeEverythingClient { CountToReturn = 3 };
+            var elapsed = new List<int>();
+            var provider = new EverythingItemsProvider(
+                client,
+                new EverythingToolbar.Core.Search.SearchQuery("notes", default, false, false, false, false, false),
+                onCountTimed: ms => elapsed.Add(ms)
+            );
+
+            var count = await provider.FetchCount(256, isAsync: true, System.Threading.CancellationToken.None);
+
+            Assert.Equal(3, count);
+            Assert.Single(elapsed);
+        }
+
+        [Fact]
         public async Task FetchRange_WorksWithoutCallback()
         {
             var client = new FakeEverythingClient { Results = new List<SearchResult> { Result(@"C:\a.txt") } };

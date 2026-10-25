@@ -43,6 +43,11 @@ namespace EverythingToolbar.App.Search
 
         public int TotalCount { get; private set; }
 
+        /// <summary>Wall time in milliseconds of the count query that produced the current result set; null until the first count query completes.</summary>
+        public int? LastQueryMilliseconds { get; private set; }
+
+        public string StatusCountText => Core.Data.StatusBarText.CountAndLatency(TotalCount, LastQueryMilliseconds);
+
         public bool IsBusy => _collection is { IsBusy: true };
 
         public event Action? ResultsReset;
@@ -175,6 +180,7 @@ namespace EverythingToolbar.App.Search
                 TotalCount = 0;
                 OnPropertyChanged(nameof(Results));
                 OnPropertyChanged(nameof(TotalCount));
+                OnPropertyChanged(nameof(StatusCountText));
                 OnPropertyChanged(nameof(IsBusy));
                 return;
             }
@@ -183,7 +189,8 @@ namespace EverythingToolbar.App.Search
             var newProvider = new EverythingItemsProvider(
                 _everythingClient,
                 _lastQuery,
-                _vocabularyRefresher.OnResultsMaterialized
+                _vocabularyRefresher.OnResultsMaterialized,
+                OnCountTimed
             );
 
             if (_collection == null)
@@ -212,7 +219,15 @@ namespace EverythingToolbar.App.Search
                 : string.Join(", ", System.Linq.Enumerable.Select(plan.Corrections, c => c.Corrected));
             OnPropertyChanged(nameof(TotalCount));
             OnPropertyChanged(nameof(FallbackHint));
+            OnPropertyChanged(nameof(StatusCountText));
             ResultsReset?.Invoke();
+        }
+
+        private void OnCountTimed(int elapsedMilliseconds)
+        {
+            LastQueryMilliseconds = elapsedMilliseconds;
+            OnPropertyChanged(nameof(LastQueryMilliseconds));
+            OnPropertyChanged(nameof(StatusCountText));
         }
 
         private void OnCollectionPropertyChanged(object? sender, PropertyChangedEventArgs e)
