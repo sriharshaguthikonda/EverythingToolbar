@@ -28,7 +28,7 @@ Current-implementation evidence cites fork source (branch `fix/typo-vocabulary-b
 
 | Feature | Reference behaviour | Version | Current implementation | Status | Backend interface | Prior art | Work required |
 |---|---|---|---|---|---|---|---|
-| Details view (multi-column, sortable headers) | Name/Path/Size/Date Modified/… columns, click header sorts | 1.5 | `Controls/SearchResultsView.xaml` single-ish layout; `EverythingPipeClient` reads only 5 property IDs (Platform/Search/EverythingPipeClient.cs:23-27) | Partial | SDK3 result properties (EVERYTHING3 IPC) | Files (DataGrid virtualization), SearchLight | virtualized DataGrid + dynamic column set + header sort menus; extend pipe client to request/sort by property ID |
+| Details view (multi-column, sortable headers) | Name/Path/Size/Date Modified/… columns, click header sorts | 1.5 | `Controls/SearchResultsView.xaml` single-ish layout; `EverythingPipeClient` now requests 9 properties (Name/Path/Size/DateModified/PathAndName + Extension/Type/DateCreated/Attributes, commit e9938d6) and sends sort (`Everything3_AddSearchSort`, `query.SortBy`) | Partial (backend ready, table UI pending) | SDK3 result properties (EVERYTHING3 IPC) | Files (DataGrid virtualization), SearchLight | virtualized details table + dynamic column set + header-click sort wired to SearchState |
 | Column chooser (right-click header) | Show/hide columns | 1.5 | Missing | Missing | local + SDK properties | Files | column visibility model + menu |
 | Multi-sort (secondary/tertiary) | 1.5: -secondary-sort etc. | 1.5b | Missing | Missing | SDK3 sort | — | sort spec in query |
 | List view / thumbnails | Icon list; thumbnail pane | 1.5 | Missing (icon list only) | Partial | shell thumbnails | SearchLight thumbnails; Files | thumbnail extractor adapter (IShellItemImageFactory) |
@@ -90,3 +90,6 @@ Real Windows UI acceptance per brief §12: measure with live elevated Everything
 | Date | Feature | Result |
 |---|---|---|
 | 2026-10-25 | (baseline) | Matrix created; 186/186 FuzzySearch tests green @ 500e3b5 |
+| 2026-10-25 | Details backend (4 extra properties) | Commit e9938d6: Extension/Type/DateCreated/Attributes requested + mapped, 11 unit tests, 197/197 green. P/Invoke signatures verified against Everything3.h:1070-1078. Live elevated check pending (pipe ACL rule) |
+| 2026-10-25 | Bundled Everything3.dll provenance | 171/171 exports are `Everything3_*` matching voidtools MIT header (174 header decls incl. 3 non-export helpers); locally built, no version resource. No unexpected exports |
+| 2026-10-25 | SDK3 filter/bookmark enumeration | NOT exposed by Everything3.h — bookmark/filter surfaces stay local-store or CSV import (EverythingFilterProvider FileSystemWatcher pattern) |
