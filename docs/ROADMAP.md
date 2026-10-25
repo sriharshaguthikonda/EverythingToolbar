@@ -10,7 +10,7 @@ Phases (from the 2026-10-25 run brief):
 | B Inventory | Everything feature inventory + parity matrix | DONE + maintained per commit (`docs/everything-1.5-parity-matrix.md`) |
 | C Prior-art | inspect Lertaro, SearchLight, Flow.Launcher, Files, QuickLook, PowerToys | DONE — `docs/Research/prior-art-expanded-ui.md` (licence conflicts flagged: QuickLook GPL, Files MIT/MPL split, SearchLight no LICENSE) |
 | D Expanded UI | menu bar, virtualized result table, property columns, tabs, sidebars, preview, keyboard, context menu | **5 features landed session 2** (255/255 tests): native shell context menu (a818812), tabs (f37149b), folder sidebar (f186153) + session-1 details table/expanded window (e9938d6, 1b40717). Live elevated acceptance still pending (user UAC) |
-| E Advanced features | bookmarks, sessions, export, batch rename, file ops, advanced search UI | bookmarks (f88866b) + export (d5879e7) DONE; remaining: sessions, batch rename (PowerRename adapt), file ops w/ undo (Files `ShellFileOperations2.cs` MIT), advanced search dialog |
+| E Advanced features | bookmarks, sessions, export, batch rename, file ops, advanced search UI | bookmarks (f88866b), export (d5879e7), sessions (bfa5ae5), Edit-menu file ops w/ undo (c578ef8), advanced search dialog (e180861) DONE; remaining: batch rename (PowerRename adapt), Index Journal / file list editor launch items |
 | F Stability | IPC recovery, sleep/hibernate (issue #4), DPI, perf budgets | queued; issues #3 (file dialog) stays a separate module |
 
 Key constraints (do not re-litigate):
