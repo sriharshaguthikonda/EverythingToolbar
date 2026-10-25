@@ -120,8 +120,18 @@ namespace EverythingToolbar.FuzzySearch.Tests
             [InlineData(EditFileAction.Paste, System.Windows.Input.Key.V, System.Windows.Input.ModifierKeys.Control)]
             [InlineData(EditFileAction.Delete, System.Windows.Input.Key.Delete, System.Windows.Input.ModifierKeys.None)]
             [InlineData(
-                EditFileAction.CopyPath,
+                EditFileAction.CopyFullPath,
                 System.Windows.Input.Key.C,
+                System.Windows.Input.ModifierKeys.Control | System.Windows.Input.ModifierKeys.Shift
+            )]
+            [InlineData(
+                EditFileAction.CopyName,
+                System.Windows.Input.Key.N,
+                System.Windows.Input.ModifierKeys.Control | System.Windows.Input.ModifierKeys.Shift
+            )]
+            [InlineData(
+                EditFileAction.CopyPath,
+                System.Windows.Input.Key.P,
                 System.Windows.Input.ModifierKeys.Control | System.Windows.Input.ModifierKeys.Shift
             )]
             public void EverythingParityGesturesMapToActions(
@@ -153,6 +163,79 @@ namespace EverythingToolbar.FuzzySearch.Tests
             )
             {
                 Assert.Equal(EditFileAction.None, EditOperationPlanner.MapGesture(key, modifiers));
+            }
+        }
+
+        public class ClipboardTextBuilder
+        {
+            [Fact]
+            public void NullSelectionBuildsEmptyText()
+            {
+                Assert.Equal("", EverythingToolbar.Platform.Shell.ClipboardTextBuilder.BuildNameLines(null));
+                Assert.Equal("", EverythingToolbar.Platform.Shell.ClipboardTextBuilder.BuildPathLines(null));
+                Assert.Equal("", EverythingToolbar.Platform.Shell.ClipboardTextBuilder.BuildFullPathLines(null));
+            }
+
+            [Fact]
+            public void SingleSelectionBuildsOneLine()
+            {
+                var selection = new[] { Result(@"C:\folder\a.txt", isFile: true) };
+
+                Assert.Equal("a.txt", EverythingToolbar.Platform.Shell.ClipboardTextBuilder.BuildNameLines(selection));
+                Assert.Equal(
+                    @"C:\folder",
+                    EverythingToolbar.Platform.Shell.ClipboardTextBuilder.BuildPathLines(selection)
+                );
+                Assert.Equal(
+                    @"C:\folder\a.txt",
+                    EverythingToolbar.Platform.Shell.ClipboardTextBuilder.BuildFullPathLines(selection)
+                );
+            }
+
+            [Fact]
+            public void MultiSelectionPreservesOrderAndJoinsWithNewlines()
+            {
+                var selection = new[]
+                {
+                    Result(@"C:\b\second.txt", isFile: true),
+                    Result(@"C:\a\first.txt", isFile: true),
+                };
+                var nl = Environment.NewLine;
+
+                Assert.Equal(
+                    "second.txt" + nl + "first.txt",
+                    EverythingToolbar.Platform.Shell.ClipboardTextBuilder.BuildNameLines(selection)
+                );
+                Assert.Equal(
+                    @"C:\b" + nl + @"C:\a",
+                    EverythingToolbar.Platform.Shell.ClipboardTextBuilder.BuildPathLines(selection)
+                );
+                Assert.Equal(
+                    @"C:\b\second.txt" + nl + @"C:\a\first.txt",
+                    EverythingToolbar.Platform.Shell.ClipboardTextBuilder.BuildFullPathLines(selection)
+                );
+            }
+
+            [Fact]
+            public void NullAndBlankEntriesAreSkipped()
+            {
+                var selection = new SearchResult?[]
+                {
+                    null,
+                    Result(@"C:\keep.txt", isFile: true),
+                    Result("", isFile: true),
+                    Result("   ", isFile: true),
+                };
+
+                Assert.Equal(
+                    "keep.txt",
+                    EverythingToolbar.Platform.Shell.ClipboardTextBuilder.BuildNameLines(selection)
+                );
+                Assert.Equal(@"C:\", EverythingToolbar.Platform.Shell.ClipboardTextBuilder.BuildPathLines(selection));
+                Assert.Equal(
+                    @"C:\keep.txt",
+                    EverythingToolbar.Platform.Shell.ClipboardTextBuilder.BuildFullPathLines(selection)
+                );
             }
         }
 

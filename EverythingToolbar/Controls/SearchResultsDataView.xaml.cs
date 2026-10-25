@@ -147,9 +147,10 @@ namespace EverythingToolbar.Controls
                 return false;
 
             // Ctrl+X/C/V and Delete keep their native text-editing behaviour while a text box
-            // (the search box) has focus; Ctrl+Shift+C (copy path) is not a text-editing gesture.
+            // (the search box) has focus; the Ctrl+Shift+ C/N/P text-copy gestures are not
+            // text-editing gestures.
             if (
-                action != EditFileAction.CopyPath
+                action is not (EditFileAction.CopyFullPath or EditFileAction.CopyName or EditFileAction.CopyPath)
                 && Keyboard.FocusedElement is System.Windows.Controls.Primitives.TextBoxBase
             )
                 return false;
@@ -169,8 +170,14 @@ namespace EverythingToolbar.Controls
                 case EditFileAction.Delete:
                     _editOperations.Delete(selection);
                     break;
-                case EditFileAction.CopyPath:
+                case EditFileAction.CopyFullPath:
                     _commands.CopySelectedPath();
+                    break;
+                case EditFileAction.CopyPath:
+                    _editOperations.CopyPaths(selection);
+                    break;
+                case EditFileAction.CopyName:
+                    _editOperations.CopyNames(selection);
                     break;
             }
 

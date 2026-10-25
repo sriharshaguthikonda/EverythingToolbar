@@ -211,6 +211,8 @@ namespace EverythingToolbar
             var canAct = _editOperations.CanActOnSelection(selection);
             EditCutMenuItem.IsEnabled = canAct;
             EditCopyMenuItem.IsEnabled = canAct;
+            EditCopyNameMenuItem.IsEnabled = canAct;
+            EditCopyPathMenuItem.IsEnabled = canAct;
             EditDeleteMenuItem.IsEnabled = canAct;
             EditPasteMenuItem.IsEnabled = _editOperations.GetPastePlan(selection).CanPaste;
         }
@@ -223,6 +225,16 @@ namespace EverythingToolbar
         private void OnEditCopyClick(object sender, RoutedEventArgs e)
         {
             _editOperations.Copy(ResultsView.GetSelectedResults());
+        }
+
+        private void OnEditCopyNameClick(object sender, RoutedEventArgs e)
+        {
+            _editOperations.CopyNames(ResultsView.GetSelectedResults());
+        }
+
+        private void OnEditCopyPathClick(object sender, RoutedEventArgs e)
+        {
+            _editOperations.CopyPaths(ResultsView.GetSelectedResults());
         }
 
         private void OnEditPasteClick(object sender, RoutedEventArgs e)

@@ -13,7 +13,9 @@ namespace EverythingToolbar.Platform.Shell
         Copy,
         Paste,
         Delete,
+        CopyFullPath,
         CopyPath,
+        CopyName,
     }
 
     /// <summary>Outcome of the paste-target decision: the destination folder and whether paste is enabled.</summary>
@@ -71,7 +73,8 @@ namespace EverythingToolbar.Platform.Shell
 
         /// <summary>
         /// Gesture table for the Edit actions (Everything semantics): Ctrl+X cut, Ctrl+C copy
-        /// files, Ctrl+V paste, Delete recycle-delete, Ctrl+Shift+C copy full name and path.
+        /// files, Ctrl+V paste, Delete recycle-delete, Ctrl+Shift+C copy full name and path,
+        /// Ctrl+Shift+N copy names, Ctrl+Shift+P copy folder paths.
         /// Everything else, including modified Delete and Shift+modified Ctrl+C, maps to None.
         /// </summary>
         public static EditFileAction MapGesture(Key key, ModifierKeys modifiers)
@@ -82,6 +85,10 @@ namespace EverythingToolbar.Platform.Shell
             if (key == Key.C && modifiers == ModifierKeys.Control)
                 return EditFileAction.Copy;
             if (key == Key.C && modifiers == (ModifierKeys.Control | ModifierKeys.Shift))
+                return EditFileAction.CopyFullPath;
+            if (key == Key.N && modifiers == (ModifierKeys.Control | ModifierKeys.Shift))
+                return EditFileAction.CopyName;
+            if (key == Key.P && modifiers == (ModifierKeys.Control | ModifierKeys.Shift))
                 return EditFileAction.CopyPath;
             if (key == Key.X && modifiers == ModifierKeys.Control)
                 return EditFileAction.Cut;

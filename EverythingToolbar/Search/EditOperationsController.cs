@@ -70,6 +70,34 @@ namespace EverythingToolbar.Search
                 _fileOperations.CopyTo(files, plan.DestinationFolder);
         }
 
+        /// <summary>Copies the selected file names to the text clipboard, one per line.</summary>
+        public void CopyNames(IReadOnlyList<SearchResult?> selection) =>
+            SetClipboardText(ClipboardTextBuilder.BuildNameLines(selection), "names");
+
+        /// <summary>Copies the selected containing folder paths to the text clipboard, one per line.</summary>
+        public void CopyPaths(IReadOnlyList<SearchResult?> selection) =>
+            SetClipboardText(ClipboardTextBuilder.BuildPathLines(selection), "paths");
+
+        /// <summary>Copies the selected full name and paths to the text clipboard, one per line.</summary>
+        public void CopyFullPaths(IReadOnlyList<SearchResult?> selection) =>
+            SetClipboardText(ClipboardTextBuilder.BuildFullPathLines(selection), "full name and paths");
+
+        private void SetClipboardText(string text, string what)
+        {
+            if (string.IsNullOrEmpty(text))
+                return;
+
+            try
+            {
+                System.Windows.Clipboard.SetText(text);
+                Logger.Info("Copied {0} to the clipboard.", what);
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e, "Failed to copy {0} to the clipboard.", what);
+            }
+        }
+
         /// <summary>Recycle-deletes the selected results via the shell (with its own confirmation).</summary>
         public void Delete(IReadOnlyList<SearchResult?> selection)
         {

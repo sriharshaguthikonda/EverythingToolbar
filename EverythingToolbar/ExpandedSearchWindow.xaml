@@ -85,6 +85,16 @@
           Header="Cut"
           InputGestureText="Ctrl+X" />
         <MenuItem
+          x:Name="EditCopyNameMenuItem"
+          Click="OnEditCopyNameClick"
+          Header="Copy Name"
+          InputGestureText="Ctrl+Shift+N" />
+        <MenuItem
+          x:Name="EditCopyPathMenuItem"
+          Click="OnEditCopyPathClick"
+          Header="Copy Path"
+          InputGestureText="Ctrl+Shift+P" />
+        <MenuItem
           x:Name="EditCopyMenuItem"
           Click="OnEditCopyClick"
           Header="Copy"
