@@ -109,6 +109,30 @@ namespace EverythingToolbar.Search
             _fileOperations.Delete(paths);
         }
 
+        /// <summary>
+        /// Renames the selected result (Everything F2 parity): enabled only when EXACTLY one result
+        /// is selected — Everything renames one item at a time, multi-select rename belongs to
+        /// Advanced Rename (Tools menu). Shows the rename dialog owned by the given window, then
+        /// lets the shell perform the rename. Failures are logged, never thrown.
+        /// </summary>
+        public void Rename(IReadOnlyList<SearchResult?> selection, System.Windows.Window? owner)
+        {
+            var (fullPath, fileName) = EditOperationPlanner.PlanRename(selection);
+            if (fullPath == null || fileName == null)
+            {
+                if (selection is { Count: > 1 })
+                    Logger.Info("Rename skipped: multiple items are selected (use Tools > Advanced Rename).");
+                return;
+            }
+
+            var dialog = new App.RenameDialog(fullPath) { Owner = owner };
+            if (dialog.ShowDialog() != true)
+                return;
+
+            Logger.Info("Renaming {0} to {1}.", fullPath, dialog.NewFileName);
+            _fileOperations.Rename(fullPath, dialog.NewFileName);
+        }
+
         /// <summary>Whether Cut/Copy/Delete are enabled for the current selection.</summary>
         public bool CanActOnSelection(IReadOnlyList<SearchResult?> selection) =>
             EditOperationPlanner.CanActOnSelection(selection);

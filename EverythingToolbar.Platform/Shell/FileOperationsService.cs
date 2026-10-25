@@ -54,6 +54,7 @@ namespace EverythingToolbar.Platform.Shell
             Copy,
             Move,
             Delete,
+            Rename,
         }
 
         /// <summary>
@@ -70,6 +71,13 @@ namespace EverythingToolbar.Platform.Shell
         /// <summary>Moves the given paths into the destination folder via the shell.</summary>
         public void MoveTo(IEnumerable<string> paths, string destinationFolder) =>
             Perform(OperationKind.Move, paths, destinationFolder);
+
+        /// <summary>
+        /// Renames a single file system item in place via the shell (IFileOperation.RenameItem),
+        /// Everything/F2 parity. Undoable through Explorer's Edit &gt; Undo (FOF_ALLOWUNDO).
+        /// </summary>
+        public void Rename(string path, string newName) =>
+            Perform(OperationKind.Rename, new[] { path }, destinationFolder: newName);
 
         /// <summary>
         /// Puts the given paths on the clipboard as a file drop list marked for copy.
@@ -193,7 +201,7 @@ namespace EverythingToolbar.Platform.Shell
                         return;
                     }
 
-                    if (kind != OperationKind.Delete)
+                    if (kind != OperationKind.Delete && kind != OperationKind.Rename)
                     {
                         if (!CreateShellItem(destinationFolder, out destinationPointer))
                             return;
@@ -217,6 +225,13 @@ namespace EverythingToolbar.Platform.Shell
                                 itemPointer,
                                 destinationPointer,
                                 IntPtr.Zero,
+                                IntPtr.Zero
+                            ),
+                            // Same queue pattern as Files Community's QueueRenameOperation:
+                            // RenameItem(source, pszNewName, null), flags stay FOF_ALLOWUNDO-based.
+                            OperationKind.Rename => operation.RenameItem(
+                                itemPointer,
+                                destinationFolder ?? string.Empty,
                                 IntPtr.Zero
                             ),
                             _ => operation.DeleteItem(itemPointer, IntPtr.Zero),
@@ -343,7 +358,7 @@ namespace EverythingToolbar.Platform.Shell
             int MoveItems(IntPtr ppsiItemArray, IntPtr psiDestinationFolder, IntPtr pfopsItem);
 
             [PreserveSig]
-            int RenameItem(IntPtr psiItem, IntPtr pszNewName, IntPtr pfopsItem);
+            int RenameItem(IntPtr psiItem, [MarshalAs(UnmanagedType.LPWStr)] string pszNewName, IntPtr pfopsItem);
 
             [PreserveSig]
             int RenameItems(IntPtr ppsiItemArray, IntPtr pszNewName, IntPtr pfopsItem);

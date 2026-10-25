@@ -281,8 +281,9 @@ namespace EverythingToolbar.Controls
 
         /// <summary>
         /// Handles the Edit-menu gestures (Everything semantics): Ctrl+X cut, Ctrl+C copy files,
-        /// Ctrl+V paste, Delete recycle-delete, Ctrl+Shift+C copy full name and path. Skipped when
-        /// a text box has keyboard focus so text editing keeps its native behaviour.
+        /// Ctrl+V paste, Delete recycle-delete, F2 rename, Ctrl+Shift+C copy full name and path.
+        /// Skipped when a text box has keyboard focus so text editing keeps its native behaviour
+        /// (F2, like Cut/Copy/Paste, acts on files and is blocked while a text box is focused).
         /// </summary>
         public bool TryHandleEditGesture(KeyEventArgs e)
         {
@@ -310,6 +311,9 @@ namespace EverythingToolbar.Controls
                     break;
                 case EditFileAction.Paste:
                     _editOperations.Paste(selection);
+                    break;
+                case EditFileAction.Rename:
+                    _editOperations.Rename(selection, Window.GetWindow(this));
                     break;
                 case EditFileAction.Delete:
                     _editOperations.Delete(selection);
