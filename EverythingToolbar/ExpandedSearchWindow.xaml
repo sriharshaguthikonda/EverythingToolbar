@@ -56,6 +56,15 @@
           InputGestureText="Ctrl+Shift+E" />
         <Separator />
         <MenuItem
+          x:Name="SessionsMenu"
+          Header="Sessions"
+          SubmenuOpened="OnSessionsSubmenuOpened">
+          <MenuItem Click="OnSaveSessionClick" Header="Save Session…" />
+          <Separator />
+          <MenuItem Header="(no sessions)" IsEnabled="False" />
+        </MenuItem>
+        <Separator />
+        <MenuItem
           x:Name="ExportMenuItem"
           Click="OnExportClick"
           Header="Export…"

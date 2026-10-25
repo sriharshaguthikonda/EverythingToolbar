@@ -92,6 +92,10 @@ namespace EverythingToolbar
                     sp.GetRequiredService<FilterProvider>()
                 ))
                 .AddSingleton<SearchBookmarkStore>()
+                .AddSingleton<SearchSessionStore>(sp => new SearchSessionStore(
+                    Path.Combine(ConfigPaths.GetConfigDirectory(), "sessions.json"),
+                    sp.GetRequiredService<FilterProvider>()
+                ))
                 .AddSingleton<SearchSession>()
                 .AddSingleton<SearchCommands>()
                 .AddSingleton<CustomActionService>()

@@ -33,6 +33,8 @@ namespace EverythingToolbar
             Ioc.Default.GetRequiredService<App.Search.SearchTabManager>();
         private readonly App.Search.SearchBookmarkStore _bookmarkStore =
             Ioc.Default.GetRequiredService<App.Search.SearchBookmarkStore>();
+        private readonly App.Search.SearchSessionStore _sessionStore =
+            Ioc.Default.GetRequiredService<App.Search.SearchSessionStore>();
         private readonly App.Search.SearchState _searchState = Ioc.Default.GetRequiredService<App.Search.SearchState>();
         private readonly App.Services.FilterProvider _filterProvider =
             Ioc.Default.GetRequiredService<App.Services.FilterProvider>();
@@ -54,6 +56,9 @@ namespace EverythingToolbar
             // Same pattern for bookmarks.json (no-op on later windows).
             _bookmarkStore.Load();
             RebuildBookmarksMenu();
+
+            // And sessions.json.
+            _sessionStore.Load();
 
             ApplyFolderSidebarVisibility(_settings.IsFolderSidebarEnabled);
         }
@@ -373,6 +378,94 @@ namespace EverythingToolbar
                 return;
 
             _bookmarkStore.Remove(bookmark.Name);
+        }
+
+        private void OnSessionsSubmenuOpened(object sender, RoutedEventArgs e)
+        {
+            // Rebuild on every open (same pattern as the Bookmarks menu) so sessions saved or
+            // deleted elsewhere are always current; the store is the single source of truth.
+            RebuildSessionsMenu();
+        }
+
+        private void RebuildSessionsMenu()
+        {
+            SessionsMenu.Items.Clear();
+
+            var saveItem = new MenuItem { Header = "Save Session…" };
+            saveItem.Click += OnSaveSessionClick;
+            SessionsMenu.Items.Add(saveItem);
+            SessionsMenu.Items.Add(new Separator());
+
+            var sessions = _sessionStore.Sessions;
+            if (sessions.Count == 0)
+            {
+                SessionsMenu.Items.Add(new MenuItem { Header = "(no sessions)", IsEnabled = false });
+            }
+            else
+            {
+                foreach (var session in sessions)
+                {
+                    var item = new MenuItem { Header = session.Name, Tag = session };
+                    item.Click += OnSessionClick;
+                    SessionsMenu.Items.Add(item);
+                }
+            }
+
+            SessionsMenu.Items.Add(new Separator());
+
+            // Delete UX mirrors the Bookmarks menu: a "Delete Session…" submenu listing session
+            // names, no confirmation (Everything doesn't confirm either).
+            var deleteItem = new MenuItem { Header = "Delete Session…" };
+            foreach (var session in sessions)
+            {
+                var entry = new MenuItem { Header = session.Name, Tag = session };
+                entry.Click += OnDeleteSessionClick;
+                deleteItem.Items.Add(entry);
+            }
+            deleteItem.IsEnabled = sessions.Count > 0;
+            SessionsMenu.Items.Add(deleteItem);
+        }
+
+        private void OnSaveSessionClick(object sender, RoutedEventArgs e)
+        {
+            // Capture the active tab's live SearchState first so the current query/filter/flags
+            // are part of the saved set, then snapshot the whole tab set (the snapshot deep-copies).
+            if (_tabManager.ActiveIndex >= 0 && _tabManager.ActiveIndex < _tabManager.Tabs.Count)
+                _searchState.CaptureSnapshotInto(_tabManager.Tabs[_tabManager.ActiveIndex]);
+
+            var dialog = new App.BookmarkNameDialog("") { Owner = Window.GetWindow(this) };
+            if (dialog.ShowDialog() != true)
+                return;
+
+            _sessionStore.Save(
+                dialog.BookmarkName,
+                new App.Search.SearchSessionSnapshot(dialog.BookmarkName, _tabManager.Tabs, _tabManager.ActiveIndex)
+            );
+        }
+
+        private void OnSessionClick(object sender, RoutedEventArgs e)
+        {
+            if (sender is not FrameworkElement { Tag: App.Search.SearchSessionSnapshot session })
+                return;
+
+            RestoreSession(session);
+        }
+
+        private void RestoreSession(App.Search.SearchSessionSnapshot session)
+        {
+            // Destructive by design (v1, no confirm): the current tab set is replaced by the
+            // session's deep-copied tabs, then persisted so tabs.json matches. The passed tabs
+            // are fresh copies, so the stored session is never aliased by the manager.
+            _tabManager.ReplaceAll(session.CreateRestoreTabs(), session.ActiveIndex);
+            _tabManager.Save();
+        }
+
+        private void OnDeleteSessionClick(object sender, RoutedEventArgs e)
+        {
+            if (sender is not FrameworkElement { Tag: App.Search.SearchSessionSnapshot session })
+                return;
+
+            _sessionStore.Delete(session.Name);
         }
 
         private void OnExportClick(object sender, RoutedEventArgs e)

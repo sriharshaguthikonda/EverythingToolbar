@@ -122,6 +122,27 @@ namespace EverythingToolbar.App.Search
         }
 
         /// <summary>
+        /// Replaces the whole tab set (used by session restore). Takes ownership of the given
+        /// tab instances — callers pass fresh deep copies (never live tabs or a stored session's
+        /// tabs) so restoring stays non-aliasing. Never yields an empty tab set (an empty input
+        /// becomes one empty tab, matching <see cref="CloseTab"/>); the active index is clamped
+        /// and the incoming tab is restored into SearchState. Persistence is the caller's job
+        /// via <see cref="Save"/> afterwards.
+        /// </summary>
+        public void ReplaceAll(IEnumerable<SearchTab> tabs, int activeIndex)
+        {
+            Tabs.Clear();
+            foreach (var tab in tabs ?? Array.Empty<SearchTab>())
+                Tabs.Add(tab);
+
+            if (Tabs.Count == 0)
+                Tabs.Add(new SearchTab());
+
+            var index = Math.Clamp(activeIndex, 0, Tabs.Count - 1);
+            Activate(index, restoreTab: Tabs[index]);
+        }
+
+        /// <summary>
         /// Loads tabs.json once per app run (first expanded-window show). Missing, corrupt or
         /// schema-incompatible files yield a single empty tab.
         /// </summary>
