@@ -175,6 +175,24 @@ namespace EverythingToolbar.Platform.Search
             return false;
         }
 
+        /// <summary>
+        /// Drops the pipe client, any adopted result list, and the cached first-page state so the
+        /// NEXT query reconnects from scratch. Used after system sleep/hibernate resume, where the
+        /// named pipe may be dead or stale and cached results may predate the sleep. Idempotent and
+        /// I/O free: it is exactly the <see cref="DisconnectLocked"/> reset under the existing gate.
+        /// No reconnect delay is applied here — the client is fully synchronous on its query paths
+        /// and must stay sleep-free per keystroke; the resume grace delay lives in the resume hook
+        /// (EverythingToolbar.Services.ResumeRecoveryService), which reconnects and refreshes after
+        /// Everything's own service has had time to wake up.
+        /// </summary>
+        public void InvalidateForResume()
+        {
+            lock (_gate)
+            {
+                DisconnectLocked();
+            }
+        }
+
         public bool TryReadCachedFirstPage(SearchQuery query, out IList<SearchResult> results)
         {
             if (!Monitor.TryEnter(_gate))

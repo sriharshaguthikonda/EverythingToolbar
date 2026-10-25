@@ -31,6 +31,7 @@ namespace EverythingToolbar
             router.SetInstanceName(settings.InstanceName);
             router.SetForceLegacySdk(settings.IsForceLegacySdk);
             provider.GetRequiredService<VocabularyRefresher>().Start();
+            provider.GetRequiredService<ResumeRecoveryService>().Start();
         }
     }
 
@@ -119,7 +120,8 @@ namespace EverythingToolbar
                 .AddSingleton<ExpandedSearchWindow>()
                 .AddSingleton<SearchWindowController>()
                 .AddSingleton<ISearchWindowController>(sp => sp.GetRequiredService<SearchWindowController>())
-                .AddSingleton<SearchHost>();
+                .AddSingleton<SearchHost>()
+                .AddSingleton<ResumeRecoveryService>();
         }
 
         public static IServiceCollection AddViewModels(this IServiceCollection services)
