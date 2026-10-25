@@ -49,6 +49,10 @@ namespace EverythingToolbar.Controls
         /// <summary>Designed widths from the XAML, reused by "Reset Columns".</summary>
         private readonly Dictionary<GridViewColumn, double> _defaultColumnWidths = new();
 
+        /// <summary>Press point and row of an in-progress left-button drag gesture.</summary>
+        private Point? _dragStartPoint;
+        private ListViewItem? _dragStartItem;
+
         public SearchResultsDataView()
         {
             InitializeComponent();
@@ -66,6 +70,8 @@ namespace EverythingToolbar.Controls
 
             ResultsListView.AddHandler(GridViewColumnHeader.ClickEvent, new RoutedEventHandler(OnColumnHeaderClick));
             ResultsListView.SelectionChanged += OnSelectionChanged;
+            ResultsListView.PreviewMouseLeftButtonDown += OnResultsListPreviewMouseLeftButtonDown;
+            ResultsListView.MouseMove += OnResultsListMouseMove;
 
             _columnVisibility = new Dictionary<GridViewColumn, ColumnVisibilityState>
             {
@@ -321,6 +327,76 @@ namespace EverythingToolbar.Controls
 
             e.Handled = true;
             return true;
+        }
+
+        /// <summary>
+        /// Records the press point and pressed row so a subsequent move beyond the drag thresholds
+        /// can start a file drag of the selected results. Drags are never started from a press on
+        /// the column headers or on empty space below the rows.
+        /// </summary>
+        private void OnResultsListPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            _dragStartPoint = null;
+            _dragStartItem = null;
+
+            if (IsColumnHeader(e.OriginalSource as DependencyObject))
+                return;
+
+            var item = FindListViewItem(e.OriginalSource as DependencyObject);
+            if (item == null)
+                return;
+
+            _dragStartPoint = e.GetPosition(ResultsListView);
+            _dragStartItem = item;
+        }
+
+        private void OnResultsListMouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.LeftButton != MouseButtonState.Pressed)
+            {
+                _dragStartPoint = null;
+                _dragStartItem = null;
+                return;
+            }
+
+            if (_dragStartPoint is not Point start || ResultsListView.SelectedItems.Count == 0)
+                return;
+
+            var current = e.GetPosition(ResultsListView);
+            if (
+                !DragSelectionBuilder.ShouldStartDrag(
+                    start.X,
+                    start.Y,
+                    current.X,
+                    current.Y,
+                    SystemParameters.MinimumHorizontalDragDistance,
+                    SystemParameters.MinimumVerticalDragDistance
+                )
+            )
+                return;
+
+            var paths = DragSelectionBuilder.BuildFilePaths(SelectedResults());
+            if (paths.Length == 0)
+                return;
+
+            _dragStartPoint = null;
+            _dragStartItem = null;
+
+            var data = new DataObject(DataFormats.FileDrop, paths);
+            data.SetData(DataFormats.Text, paths[0]);
+            DragDrop.DoDragDrop(ResultsListView, data, DragDropEffects.All);
+        }
+
+        private static bool IsColumnHeader(DependencyObject? source)
+        {
+            while (source != null && source is not ListView)
+            {
+                if (source is GridViewColumnHeader)
+                    return true;
+                source = source is Visual ? VisualTreeHelper.GetParent(source) : LogicalTreeHelper.GetParent(source);
+            }
+
+            return false;
         }
 
         private void OnListRightButtonUp(object sender, MouseButtonEventArgs e)
