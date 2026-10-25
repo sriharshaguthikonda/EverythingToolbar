@@ -1,5 +1,7 @@
 using System;
+using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.DependencyInjection;
 using EverythingToolbar.App;
@@ -18,6 +20,11 @@ namespace EverythingToolbar
         private readonly SearchWindowController _controller = Ioc.Default.GetRequiredService<SearchWindowController>();
         private readonly App.Search.SearchTabManager _tabManager =
             Ioc.Default.GetRequiredService<App.Search.SearchTabManager>();
+        private readonly App.Search.SearchBookmarkStore _bookmarkStore =
+            Ioc.Default.GetRequiredService<App.Search.SearchBookmarkStore>();
+        private readonly App.Search.SearchState _searchState = Ioc.Default.GetRequiredService<App.Search.SearchState>();
+        private readonly App.Services.FilterProvider _filterProvider =
+            Ioc.Default.GetRequiredService<App.Services.FilterProvider>();
 
         public ExpandedSearchWindow()
         {
@@ -31,6 +38,10 @@ namespace EverythingToolbar
             // Idempotent: the first expanded window after app start loads tabs.json (single empty
             // tab on fresh install); later windows share the already-populated manager singleton.
             _tabManager.Load();
+
+            // Same pattern for bookmarks.json (no-op on later windows).
+            _bookmarkStore.Load();
+            RebuildBookmarksMenu();
         }
 
         private void OnWindowClosed(object? sender, EventArgs e)
@@ -65,6 +76,13 @@ namespace EverythingToolbar
             if (modifiers == ModifierKeys.Control && e.Key == Key.P)
             {
                 TogglePreview();
+                e.Handled = true;
+                return;
+            }
+
+            if (modifiers == ModifierKeys.Control && e.Key == Key.D)
+            {
+                AddBookmark();
                 e.Handled = true;
                 return;
             }
@@ -205,6 +223,102 @@ namespace EverythingToolbar
         private void OnToggleRegexClick(object sender, RoutedEventArgs e)
         {
             _settings.IsRegExEnabled = !_settings.IsRegExEnabled;
+        }
+
+        private void OnBookmarksSubmenuOpened(object sender, RoutedEventArgs e)
+        {
+            // Rebuild on every open so bookmarks added/removed elsewhere (or in another window)
+            // are always current; the store is the single source of truth.
+            RebuildBookmarksMenu();
+        }
+
+        private void RebuildBookmarksMenu()
+        {
+            BookmarksMenu.Items.Clear();
+
+            var addItem = new MenuItem { Header = "Add Bookmark…", InputGestureText = "Ctrl+D" };
+            addItem.Click += OnAddBookmarkClick;
+            BookmarksMenu.Items.Add(addItem);
+            BookmarksMenu.Items.Add(new Separator());
+
+            var bookmarks = _bookmarkStore.Bookmarks;
+            if (bookmarks.Count == 0)
+            {
+                BookmarksMenu.Items.Add(new MenuItem { Header = "(no bookmarks)", IsEnabled = false });
+            }
+            else
+            {
+                foreach (var bookmark in bookmarks)
+                {
+                    var item = new MenuItem { Header = bookmark.Name, Tag = bookmark };
+                    item.Click += OnBookmarkClick;
+                    BookmarksMenu.Items.Add(item);
+                }
+            }
+
+            BookmarksMenu.Items.Add(new Separator());
+
+            // Remove UX choice: a "Remove…" submenu listing bookmark names (alphabetical, like
+            // the run items) instead of right-click context menus on menu items.
+            var removeItem = new MenuItem { Header = "Remove…" };
+            foreach (var bookmark in bookmarks)
+            {
+                var entry = new MenuItem { Header = bookmark.Name, Tag = bookmark };
+                entry.Click += OnRemoveBookmarkClick;
+                removeItem.Items.Add(entry);
+            }
+            removeItem.IsEnabled = bookmarks.Count > 0;
+            BookmarksMenu.Items.Add(removeItem);
+        }
+
+        private void OnAddBookmarkClick(object sender, RoutedEventArgs e)
+        {
+            AddBookmark();
+        }
+
+        private void AddBookmark()
+        {
+            var dialog = new App.BookmarkNameDialog(_searchState.SearchTerm) { Owner = Window.GetWindow(this) };
+            if (dialog.ShowDialog() != true)
+                return;
+
+            _bookmarkStore.Add(
+                dialog.BookmarkName,
+                _searchState.SearchTerm,
+                _searchState.Filter?.Name,
+                _searchState.EffectiveSortBy,
+                _searchState.EffectiveIsSortDescending
+            );
+        }
+
+        private void OnBookmarkClick(object sender, RoutedEventArgs e)
+        {
+            if (sender is not FrameworkElement { Tag: App.Search.SearchBookmark bookmark })
+                return;
+
+            RunBookmark(bookmark);
+        }
+
+        private void RunBookmark(App.Search.SearchBookmark bookmark)
+        {
+            // Plain property sets + SetSort only (never RestoreSnapshot): bookmarks must not
+            // touch the match flags. A filter name that no longer resolves degrades silently
+            // to no filter (the default "All" filter).
+            _searchState.SearchTerm = bookmark.SearchTerm;
+            _searchState.Filter =
+                _filterProvider.Filters.FirstOrDefault(f => f.Name == bookmark.FilterName)
+                ?? _filterProvider.Filters[0];
+            _searchState.SetSort(bookmark.SortBy, bookmark.IsSortDescending);
+
+            FocusSearchBox();
+        }
+
+        private void OnRemoveBookmarkClick(object sender, RoutedEventArgs e)
+        {
+            if (sender is not FrameworkElement { Tag: App.Search.SearchBookmark bookmark })
+                return;
+
+            _bookmarkStore.Remove(bookmark.Name);
         }
 
         private void OnAboutClick(object sender, RoutedEventArgs e)

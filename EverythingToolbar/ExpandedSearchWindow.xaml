@@ -93,6 +93,17 @@
           IsCheckable="True"
           IsChecked="{Binding Source={markup:Service {x:Type appsearch:SearchState}}, Path=IsRegExEnabled, Mode=OneWay}" />
       </MenuItem>
+      <MenuItem
+        x:Name="BookmarksMenu"
+        Header="Bookmarks"
+        SubmenuOpened="OnBookmarksSubmenuOpened">
+        <MenuItem
+          Click="OnAddBookmarkClick"
+          Header="Add Bookmark…"
+          InputGestureText="Ctrl+D" />
+        <Separator />
+        <MenuItem Header="(no bookmarks)" IsEnabled="False" />
+      </MenuItem>
       <MenuItem Header="Help">
         <MenuItem Click="OnAboutClick" Header="About" />
       </MenuItem>

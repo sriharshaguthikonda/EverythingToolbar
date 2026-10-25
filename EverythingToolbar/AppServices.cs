@@ -91,6 +91,7 @@ namespace EverythingToolbar
                     sp.GetRequiredService<SearchState>(),
                     sp.GetRequiredService<FilterProvider>()
                 ))
+                .AddSingleton<SearchBookmarkStore>()
                 .AddSingleton<SearchSession>()
                 .AddSingleton<SearchCommands>()
                 .AddSingleton<CustomActionService>()
