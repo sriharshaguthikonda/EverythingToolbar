@@ -68,6 +68,12 @@
       </MenuItem>
       <MenuItem Header="View">
         <MenuItem
+          x:Name="FolderSidebarMenuItem"
+          Click="OnToggleFolderSidebarClick"
+          Header="Toggle Folder Sidebar"
+          InputGestureText="Ctrl+B"
+          IsCheckable="True" />
+        <MenuItem
           Click="OnTogglePreviewClick"
           Header="Toggle Preview"
           InputGestureText="Ctrl+P" />
@@ -227,13 +233,18 @@
 
     <Grid Grid.Row="3" Margin="8 8 8 0">
       <Grid.ColumnDefinitions>
+        <ColumnDefinition x:Name="SidebarColumn" Width="240" />
         <ColumnDefinition Width="*" />
         <ColumnDefinition Width="Auto" />
       </Grid.ColumnDefinitions>
-      <controls:SearchResultsDataView x:Name="ResultsView" Grid.Column="0" />
+      <controls:FolderSidebarView
+        x:Name="FolderSidebar"
+        Grid.Column="0"
+        Visibility="Collapsed" />
+      <controls:SearchResultsDataView x:Name="ResultsView" Grid.Column="1" />
       <controls:SearchResultPreviewPane
         x:Name="PreviewPane"
-        Grid.Column="1"
+        Grid.Column="2"
         Width="380"
         Margin="8 0 0 0"
         SelectedResult="{Binding ElementName=ResultsView, Path=SelectedResult}" />

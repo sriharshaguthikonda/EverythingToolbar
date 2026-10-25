@@ -54,6 +54,8 @@ namespace EverythingToolbar
             // Same pattern for bookmarks.json (no-op on later windows).
             _bookmarkStore.Load();
             RebuildBookmarksMenu();
+
+            ApplyFolderSidebarVisibility(_settings.IsFolderSidebarEnabled);
         }
 
         private void OnWindowClosed(object? sender, EventArgs e)
@@ -96,6 +98,13 @@ namespace EverythingToolbar
             if (modifiers == ModifierKeys.Control && e.Key == Key.F)
             {
                 FocusSearchBox();
+                e.Handled = true;
+                return;
+            }
+
+            if (modifiers == ModifierKeys.Control && e.Key == Key.B)
+            {
+                ToggleFolderSidebar();
                 e.Handled = true;
                 return;
             }
@@ -230,6 +239,24 @@ namespace EverythingToolbar
         {
             StatusBar.Visibility =
                 StatusBar.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        private void OnToggleFolderSidebarClick(object sender, RoutedEventArgs e)
+        {
+            ToggleFolderSidebar();
+        }
+
+        private void ToggleFolderSidebar()
+        {
+            _settings.IsFolderSidebarEnabled = !_settings.IsFolderSidebarEnabled;
+            ApplyFolderSidebarVisibility(_settings.IsFolderSidebarEnabled);
+        }
+
+        private void ApplyFolderSidebarVisibility(bool visible)
+        {
+            FolderSidebar.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+            SidebarColumn.Width = visible ? new GridLength(240) : new GridLength(0);
+            FolderSidebarMenuItem.IsChecked = visible;
         }
 
         private void OnToggleMatchCaseClick(object sender, RoutedEventArgs e)

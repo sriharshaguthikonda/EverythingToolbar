@@ -184,5 +184,8 @@ namespace EverythingToolbar.App
 
         [Option(DefaultValue = 9)]
         int TypoLongWordMinLength { get; set; }
+
+        [Option(DefaultValue = false)]
+        bool IsFolderSidebarEnabled { get; set; }
     }
 }
