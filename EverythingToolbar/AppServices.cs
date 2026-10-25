@@ -96,7 +96,8 @@ namespace EverythingToolbar
                 .AddSingleton<SearchCommands>()
                 .AddSingleton<CustomActionService>()
                 .AddSingleton<SearchResultActions>()
-                .AddSingleton<EverythingSearchLauncher>();
+                .AddSingleton<EverythingSearchLauncher>()
+                .AddSingleton<EverythingToolbar.App.Search.ResultsExportService>();
         }
 
         // Windowing, theming, OS policy, and the global input hooks that drive the search window.

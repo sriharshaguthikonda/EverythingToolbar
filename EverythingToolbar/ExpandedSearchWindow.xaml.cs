@@ -1,12 +1,19 @@
 using System;
+using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.DependencyInjection;
 using EverythingToolbar.App;
+using EverythingToolbar.App.Helpers;
+using EverythingToolbar.Core.Search;
 using EverythingToolbar.Search;
 using EverythingToolbar.Services;
+using NLog;
 
 namespace EverythingToolbar
 {
@@ -14,9 +21,13 @@ namespace EverythingToolbar
     {
         private const string RepoUrl = "https://github.com/srwi/EverythingToolbar";
 
+        private static readonly ILogger Logger = ToolbarLogger.GetLogger<ExpandedSearchWindow>();
+
         private readonly ISettings _settings = Ioc.Default.GetRequiredService<ISettings>();
         private readonly SearchSession _session = Ioc.Default.GetRequiredService<SearchSession>();
         private readonly SearchCommands _commands = Ioc.Default.GetRequiredService<SearchCommands>();
+        private readonly App.Search.ResultsExportService _exportService =
+            Ioc.Default.GetRequiredService<App.Search.ResultsExportService>();
         private readonly SearchWindowController _controller = Ioc.Default.GetRequiredService<SearchWindowController>();
         private readonly App.Search.SearchTabManager _tabManager =
             Ioc.Default.GetRequiredService<App.Search.SearchTabManager>();
@@ -25,6 +36,7 @@ namespace EverythingToolbar
         private readonly App.Search.SearchState _searchState = Ioc.Default.GetRequiredService<App.Search.SearchState>();
         private readonly App.Services.FilterProvider _filterProvider =
             Ioc.Default.GetRequiredService<App.Services.FilterProvider>();
+        private CancellationTokenSource? _exportCts;
 
         public ExpandedSearchWindow()
         {
@@ -61,7 +73,22 @@ namespace EverythingToolbar
 
             if (e.Key == Key.Escape)
             {
+                // While an export is running, Esc cancels it instead of closing the window.
+                if (_exportCts is not null)
+                {
+                    _exportCts.Cancel();
+                    e.Handled = true;
+                    return;
+                }
+
                 Close();
+                e.Handled = true;
+                return;
+            }
+
+            if (modifiers == ModifierKeys.Control && e.Key == Key.S)
+            {
+                ExportResults();
                 e.Handled = true;
                 return;
             }
@@ -319,6 +346,119 @@ namespace EverythingToolbar
                 return;
 
             _bookmarkStore.Remove(bookmark.Name);
+        }
+
+        private void OnExportClick(object sender, RoutedEventArgs e)
+        {
+            ExportResults();
+        }
+
+        private async void ExportResults()
+        {
+            // One export at a time; the menu item is disabled while running anyway.
+            if (_exportCts is not null)
+                return;
+
+            var searchTerm = _searchState.SearchTerm;
+            var dialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Title = "Export Search Results",
+                Filter = "CSV file (*.csv)|*.csv|Text file (*.txt)|*.txt|EFU file list (*.efu)|*.efu",
+                FilterIndex = 1,
+                DefaultExt = ".csv",
+                FileName = SanitizeFileName(searchTerm),
+            };
+
+            if (dialog.ShowDialog(this) != true)
+                return;
+
+            var format = dialog.FilterIndex switch
+            {
+                2 => ExportFormat.Txt,
+                3 => ExportFormat.Efu,
+                _ => ExportFormat.Csv,
+            };
+            var expectedExtension = format switch
+            {
+                ExportFormat.Txt => ".txt",
+                ExportFormat.Efu => ".efu",
+                _ => ".csv",
+            };
+            if (!Path.HasExtension(dialog.FileName))
+                dialog.FileName += expectedExtension;
+
+            // Build the query on the UI thread so it captures exactly the displayed state
+            // (including the typo-fallback behaviour) before any background work starts.
+            var query = _searchState.BuildSearchQuery();
+            var destinationPath = dialog.FileName;
+            var destinationName = Path.GetFileName(destinationPath);
+
+            _exportCts = new CancellationTokenSource();
+            ExportMenuItem.IsEnabled = false;
+            SetExportStatus("Exporting…");
+            var progress = new Progress<int>(count => SetExportStatus($"Exporting {count}…"));
+            var cancellationToken = _exportCts.Token;
+
+            try
+            {
+                var exported = await Task.Run(async () =>
+                {
+                    using var stream = new FileStream(
+                        destinationPath,
+                        FileMode.Create,
+                        FileAccess.Write,
+                        FileShare.None
+                    );
+                    return await _exportService.ExportAsync(query, stream, format, progress, cancellationToken);
+                });
+
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    SetExportStatus("Export canceled");
+                    ScheduleExportStatusClear();
+                }
+                else
+                {
+                    SetExportStatus($"Exported {exported} to {destinationName}");
+                    ScheduleExportStatusClear();
+                }
+            }
+            catch (Exception exception)
+            {
+                Logger.Error(exception, "Failed to export search results to {0}.", destinationPath);
+                SetExportStatus("Export failed");
+                ScheduleExportStatusClear();
+            }
+            finally
+            {
+                _exportCts.Dispose();
+                _exportCts = null;
+                ExportMenuItem.IsEnabled = true;
+            }
+        }
+
+        private void SetExportStatus(string text)
+        {
+            ExportStatusText.Text = text;
+        }
+
+        private static string SanitizeFileName(string searchTerm)
+        {
+            var name = string.IsNullOrWhiteSpace(searchTerm) ? "Search Results" : searchTerm.Trim();
+            foreach (var invalidChar in Path.GetInvalidFileNameChars())
+                name = name.Replace(invalidChar, '_');
+            return name;
+        }
+
+        private void ScheduleExportStatusClear()
+        {
+            var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+            timer.Tick += (sender, _) =>
+            {
+                ((DispatcherTimer)sender).Stop();
+                ExportStatusText.Text = null;
+            };
+            timer.Start();
         }
 
         private void OnAboutClick(object sender, RoutedEventArgs e)

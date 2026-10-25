@@ -56,6 +56,12 @@
           InputGestureText="Ctrl+Shift+E" />
         <Separator />
         <MenuItem
+          x:Name="ExportMenuItem"
+          Click="OnExportClick"
+          Header="Export…"
+          InputGestureText="Ctrl+S" />
+        <Separator />
+        <MenuItem
           Click="OnCloseClick"
           Header="Close"
           InputGestureText="Alt+F4" />
@@ -274,6 +280,22 @@
               </Style>
             </TextBlock.Style>
             <Run Text="{Binding Source={markup:Service {x:Type appsearch:SearchSession}}, Path=FallbackHint, Mode=OneWay}" />
+          </TextBlock>
+          <TextBlock
+            x:Name="ExportStatusText"
+            VerticalAlignment="Center"
+            Foreground="{DynamicResource SearchResultPath}">
+            <TextBlock.Style>
+              <Style TargetType="TextBlock">
+                <Setter Property="Visibility" Value="Collapsed" />
+                <Setter Property="Margin" Value="8 0 0 0" />
+                <Style.Triggers>
+                  <Trigger Property="Text" Value="{x:Null}">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                  </Trigger>
+                </Style.Triggers>
+              </Style>
+            </TextBlock.Style>
           </TextBlock>
         </StackPanel>
         <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
