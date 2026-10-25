@@ -47,7 +47,7 @@ Current-implementation evidence cites fork source (branch `fix/typo-vocabulary-b
 | Copy name / copy path | Edit menu | all | exists (quick actions) | Full | local | existing | — |
 | Rename (single) | inline/field dialog | all | Missing | Missing | shell | Files | — |
 | Advanced Rename / batch rename with preview | 1.5 dialog (-copyto/-moveto/-rename) | 1.5 | Missing | Missing | shell IFileOperation + local pattern engine | PowerToys PowerRename (MIT) | ADAPT PowerRename pattern engine or invoke Everything.exe -rename on selection |
-| Delete / move / copy with progress + undo | Explorer-consistent ops | all | delete exists via shell? verify | Partial | IFileOperation | Files | IFileOperation wrapper with progress + Explorer undo |
+| Delete / move / copy with progress + undo | Explorer-consistent ops | all | Implemented (commit c578ef8): Edit menu (Cut/Copy/Paste/Delete) + gestures (Ctrl+X/C/V, Del) on selection via minimal IFileOperation (adapted from Files Community MIT) — delete = FOF_ALLOWUNDO with shell confirm left on (recycle bin + Explorer Edit>Undo, matching Everything's delegated-undo docs); clipboard CF_HDROP + Preferred DropEffect (pure codec). Copy-path moved to Ctrl+Shift+C, Match Case now Ctrl+I | Partial — implemented, live check pending (destructive ops on fixtures only) | shell IFileOperation + OLE clipboard | Files `ShellFileOperations2.cs` (MIT, REUSE) | progress sink UI (shell native dialog used v1); rename op |
 | File properties dialog | shell properties | all | exists? verify | Partial | shell | existing | — |
 | Find duplicates (dupe: search) | Tools menu | 1.5 | Delegated — dupe: syntax passes through | Delegated | query syntax | — | menu item that sets dupe: query |
 
