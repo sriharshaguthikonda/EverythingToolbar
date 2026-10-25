@@ -146,6 +146,17 @@
           InputGestureText="Ctrl+Shift+A" />
       </MenuItem>
       <MenuItem
+        x:Name="ToolsMenu"
+        Header="Tools"
+        SubmenuOpened="OnToolsSubmenuOpened">
+        <MenuItem Click="OnEverythingClick" Header="Everything" />
+        <MenuItem
+          x:Name="ToolsAdvancedRenameMenuItem"
+          Click="OnAdvancedRenameClick"
+          Header="Advanced Rename…" />
+        <MenuItem Click="OnFindDuplicateNamesClick" Header="Find Duplicate Names" />
+      </MenuItem>
+      <MenuItem
         x:Name="BookmarksMenu"
         Header="Bookmarks"
         SubmenuOpened="OnBookmarksSubmenuOpened">

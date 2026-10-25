@@ -41,6 +41,8 @@ namespace EverythingToolbar
             Ioc.Default.GetRequiredService<EditOperationsController>();
         private readonly App.Services.FilterProvider _filterProvider =
             Ioc.Default.GetRequiredService<App.Services.FilterProvider>();
+        private readonly App.Search.EverythingSearchLauncher _everythingLauncher =
+            Ioc.Default.GetRequiredService<App.Search.EverythingSearchLauncher>();
         private CancellationTokenSource? _exportCts;
 
         public ExpandedSearchWindow()
@@ -231,6 +233,42 @@ namespace EverythingToolbar
         private void OnEditDeleteClick(object sender, RoutedEventArgs e)
         {
             _editOperations.Delete(ResultsView.GetSelectedResults());
+        }
+
+        private void OnToolsSubmenuOpened(object sender, RoutedEventArgs e)
+        {
+            // Recomputed on every open (same pattern as the Edit menu) so the rename item always
+            // reflects the live selection.
+            ToolsAdvancedRenameMenuItem.IsEnabled = ResultsView.GetSelectedResults().Count > 0;
+        }
+
+        private void OnEverythingClick(object sender, RoutedEventArgs e)
+        {
+            // No arguments: opens/activates Everything's own main search window.
+            _everythingLauncher.Launch();
+        }
+
+        private void OnAdvancedRenameClick(object sender, RoutedEventArgs e)
+        {
+            var paths = ResultsView
+                .GetSelectedResults()
+                .Where(result => result is not null)
+                .Select(result => result!.FullPathAndFileName)
+                .ToList();
+            if (paths.Count == 0)
+                return;
+
+            _everythingLauncher.Launch(
+                new[] { "-rename" }.Concat(App.Search.EverythingLauncherArguments.BuildRenameArguments(paths)).ToList()
+            );
+        }
+
+        private void OnFindDuplicateNamesClick(object sender, RoutedEventArgs e)
+        {
+            // Bare "dupe:" is Everything's documented duplicate-name query (Tools > Find
+            // Duplicate Names equivalent); the SearchTerm setter rebuilds the session.
+            _searchState.SearchTerm = App.Search.EverythingLauncherArguments.DuplicateNamesSearchTerm;
+            FocusSearchBox();
         }
 
         private void OnAdvancedSearchClick(object sender, RoutedEventArgs e)
