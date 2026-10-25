@@ -34,6 +34,8 @@ namespace EverythingToolbar.Controls
         private readonly SearchCommands _commands = Ioc.Default.GetRequiredService<SearchCommands>();
         private readonly ShellContextMenuService _shellContextMenu =
             Ioc.Default.GetRequiredService<ShellContextMenuService>();
+        private readonly Search.EditOperationsController _editOperations =
+            Ioc.Default.GetRequiredService<Search.EditOperationsController>();
 
         public SearchResultsDataView()
         {
@@ -126,8 +128,54 @@ namespace EverythingToolbar.Controls
                 return;
             }
 
+            if (TryHandleEditGesture(e))
+                return;
+
             if (_commands.TranslateResultsGesture(e.Key, e.SystemKey, Keyboard.Modifiers, fromSearchBox: false))
                 e.Handled = true;
+        }
+
+        /// <summary>
+        /// Handles the Edit-menu gestures (Everything semantics): Ctrl+X cut, Ctrl+C copy files,
+        /// Ctrl+V paste, Delete recycle-delete, Ctrl+Shift+C copy full name and path. Skipped when
+        /// a text box has keyboard focus so text editing keeps its native behaviour.
+        /// </summary>
+        public bool TryHandleEditGesture(KeyEventArgs e)
+        {
+            var action = EditOperationPlanner.MapGesture(e.Key, Keyboard.Modifiers);
+            if (action == EditFileAction.None)
+                return false;
+
+            // Ctrl+X/C/V and Delete keep their native text-editing behaviour while a text box
+            // (the search box) has focus; Ctrl+Shift+C (copy path) is not a text-editing gesture.
+            if (
+                action != EditFileAction.CopyPath
+                && Keyboard.FocusedElement is System.Windows.Controls.Primitives.TextBoxBase
+            )
+                return false;
+
+            var selection = GetSelectedResults();
+            switch (action)
+            {
+                case EditFileAction.Cut:
+                    _editOperations.Cut(selection);
+                    break;
+                case EditFileAction.Copy:
+                    _editOperations.Copy(selection);
+                    break;
+                case EditFileAction.Paste:
+                    _editOperations.Paste(selection);
+                    break;
+                case EditFileAction.Delete:
+                    _editOperations.Delete(selection);
+                    break;
+                case EditFileAction.CopyPath:
+                    _commands.CopySelectedPath();
+                    break;
+            }
+
+            e.Handled = true;
+            return true;
         }
 
         private void OnListRightButtonUp(object sender, MouseButtonEventArgs e)
@@ -191,6 +239,15 @@ namespace EverythingToolbar.Controls
         {
             foreach (var item in ResultsListView.SelectedItems)
                 yield return item as SearchResult;
+        }
+
+        /// <summary>The currently selected results, for the Edit-menu operations.</summary>
+        public IReadOnlyList<SearchResult?> GetSelectedResults()
+        {
+            var results = new List<SearchResult?>(ResultsListView.SelectedItems.Count);
+            foreach (var item in ResultsListView.SelectedItems)
+                results.Add(item as SearchResult);
+            return results;
         }
 
         private static ListViewItem? FindListViewItem(DependencyObject? source)

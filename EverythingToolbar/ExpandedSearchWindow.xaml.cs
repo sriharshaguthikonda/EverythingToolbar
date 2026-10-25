@@ -11,6 +11,7 @@ using CommunityToolkit.Mvvm.DependencyInjection;
 using EverythingToolbar.App;
 using EverythingToolbar.App.Helpers;
 using EverythingToolbar.Core.Search;
+using EverythingToolbar.Platform.Shell;
 using EverythingToolbar.Search;
 using EverythingToolbar.Services;
 using NLog;
@@ -36,6 +37,8 @@ namespace EverythingToolbar
         private readonly App.Search.SearchSessionStore _sessionStore =
             Ioc.Default.GetRequiredService<App.Search.SearchSessionStore>();
         private readonly App.Search.SearchState _searchState = Ioc.Default.GetRequiredService<App.Search.SearchState>();
+        private readonly EditOperationsController _editOperations =
+            Ioc.Default.GetRequiredService<EditOperationsController>();
         private readonly App.Services.FilterProvider _filterProvider =
             Ioc.Default.GetRequiredService<App.Services.FilterProvider>();
         private CancellationTokenSource? _exportCts;
@@ -160,10 +163,6 @@ namespace EverythingToolbar
             {
                 switch (e.Key)
                 {
-                    case Key.C:
-                        _settings.IsMatchCase = !_settings.IsMatchCase;
-                        e.Handled = true;
-                        return;
                     case Key.W:
                         _settings.IsMatchWholeWord = !_settings.IsMatchWholeWord;
                         e.Handled = true;
@@ -179,6 +178,15 @@ namespace EverythingToolbar
                 }
             }
 
+            // Edit-menu file operations (Everything semantics: Ctrl+C copies the selected files;
+            // copy path is Ctrl+Shift+C). The data view skips text-editing keys while the search
+            // box has focus, so text editing keeps its native behaviour.
+            if (ResultsView.TryHandleEditGesture(e))
+            {
+                e.Handled = true;
+                return;
+            }
+
             if (_commands.TranslateResultsGesture(e.Key, e.SystemKey, modifiers, fromSearchBox: true))
                 e.Handled = true;
         }
@@ -187,6 +195,38 @@ namespace EverythingToolbar
         {
             PreviewPane.Visibility =
                 PreviewPane.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        private void OnEditSubmenuOpened(object sender, RoutedEventArgs e)
+        {
+            // Recomputed on every open so enablement always reflects the live selection and
+            // clipboard (Everything re-evaluates the same way).
+            var selection = ResultsView.GetSelectedResults();
+            var canAct = _editOperations.CanActOnSelection(selection);
+            EditCutMenuItem.IsEnabled = canAct;
+            EditCopyMenuItem.IsEnabled = canAct;
+            EditDeleteMenuItem.IsEnabled = canAct;
+            EditPasteMenuItem.IsEnabled = _editOperations.GetPastePlan(selection).CanPaste;
+        }
+
+        private void OnEditCutClick(object sender, RoutedEventArgs e)
+        {
+            _editOperations.Cut(ResultsView.GetSelectedResults());
+        }
+
+        private void OnEditCopyClick(object sender, RoutedEventArgs e)
+        {
+            _editOperations.Copy(ResultsView.GetSelectedResults());
+        }
+
+        private void OnEditPasteClick(object sender, RoutedEventArgs e)
+        {
+            _editOperations.Paste(ResultsView.GetSelectedResults());
+        }
+
+        private void OnEditDeleteClick(object sender, RoutedEventArgs e)
+        {
+            _editOperations.Delete(ResultsView.GetSelectedResults());
         }
 
         private void OnNewWindowClick(object sender, RoutedEventArgs e)

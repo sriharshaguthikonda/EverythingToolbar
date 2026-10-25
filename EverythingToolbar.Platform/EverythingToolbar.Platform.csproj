@@ -3,6 +3,10 @@
     <OutputType>Library</OutputType>
     <RootNamespace>EverythingToolbar.Platform</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- UseWPF: the shell file-operations service uses System.Windows.Clipboard (CF_HDROP +
+         Preferred DropEffect) for Explorer-parity Cut/Copy/Paste, and the edit gesture mapper
+         classifies System.Windows.Input.Key gestures. -->
+    <UseWPF>true</UseWPF>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference

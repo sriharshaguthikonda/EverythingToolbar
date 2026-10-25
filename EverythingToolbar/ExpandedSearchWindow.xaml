@@ -75,6 +75,32 @@
           Header="Close"
           InputGestureText="Alt+F4" />
       </MenuItem>
+      <MenuItem
+        x:Name="EditMenu"
+        Header="Edit"
+        SubmenuOpened="OnEditSubmenuOpened">
+        <MenuItem
+          x:Name="EditCutMenuItem"
+          Click="OnEditCutClick"
+          Header="Cut"
+          InputGestureText="Ctrl+X" />
+        <MenuItem
+          x:Name="EditCopyMenuItem"
+          Click="OnEditCopyClick"
+          Header="Copy"
+          InputGestureText="Ctrl+C" />
+        <MenuItem
+          x:Name="EditPasteMenuItem"
+          Click="OnEditPasteClick"
+          Header="Paste"
+          InputGestureText="Ctrl+V" />
+        <Separator />
+        <MenuItem
+          x:Name="EditDeleteMenuItem"
+          Click="OnEditDeleteClick"
+          Header="Delete"
+          InputGestureText="Del" />
+      </MenuItem>
       <MenuItem Header="View">
         <MenuItem
           x:Name="FolderSidebarMenuItem"
@@ -92,7 +118,7 @@
         <MenuItem
           Click="OnToggleMatchCaseClick"
           Header="Match Case"
-          InputGestureText="Ctrl+Shift+C"
+          InputGestureText="Ctrl+I"
           IsCheckable="True"
           IsChecked="{Binding Source={markup:Service {x:Type appsearch:SearchState}}, Path=IsMatchCase, Mode=OneWay}" />
         <MenuItem

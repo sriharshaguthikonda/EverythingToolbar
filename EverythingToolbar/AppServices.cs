@@ -111,6 +111,8 @@ namespace EverythingToolbar
                 .AddSingleton<WindowsPolicy>()
                 .AddSingleton<ThemeService>()
                 .AddSingleton<EverythingToolbar.Platform.Shell.ShellContextMenuService>()
+                .AddSingleton<EverythingToolbar.Platform.Shell.FileOperationsService>()
+                .AddSingleton<Search.EditOperationsController>()
                 .AddSingleton<StartMenuSearchInterceptor>()
                 .AddSingleton<GlobalShortcutListener>()
                 .AddSingleton<SearchWindow>()
