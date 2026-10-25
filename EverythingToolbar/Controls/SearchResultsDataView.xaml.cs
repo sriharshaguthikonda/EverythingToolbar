@@ -1,12 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.DependencyInjection;
+using EverythingToolbar.App;
 using EverythingToolbar.App.Search;
 using EverythingToolbar.Core.Data;
 using EverythingToolbar.Platform.Shell;
@@ -36,6 +38,16 @@ namespace EverythingToolbar.Controls
             Ioc.Default.GetRequiredService<ShellContextMenuService>();
         private readonly Search.EditOperationsController _editOperations =
             Ioc.Default.GetRequiredService<Search.EditOperationsController>();
+        private readonly ISettings _settings = Ioc.Default.GetRequiredService<ISettings>();
+
+        /// <summary>
+        /// Hideable columns with their width-collapse state, seeded with the designed widths from
+        /// the XAML (reused by "Reset Columns"). The Name column is never hideable.
+        /// </summary>
+        private readonly Dictionary<GridViewColumn, ColumnVisibilityState> _columnVisibility;
+
+        /// <summary>Designed widths from the XAML, reused by "Reset Columns".</summary>
+        private readonly Dictionary<GridViewColumn, double> _defaultColumnWidths = new();
 
         public SearchResultsDataView()
         {
@@ -54,12 +66,29 @@ namespace EverythingToolbar.Controls
 
             ResultsListView.AddHandler(GridViewColumnHeader.ClickEvent, new RoutedEventHandler(OnColumnHeaderClick));
             ResultsListView.SelectionChanged += OnSelectionChanged;
+
+            _columnVisibility = new Dictionary<GridViewColumn, ColumnVisibilityState>
+            {
+                [ColumnPath] = new ColumnVisibilityState("Path", savedWidth: ColumnPath.Width),
+                [ColumnSize] = new ColumnVisibilityState("Size", savedWidth: ColumnSize.Width),
+                [ColumnDateModified] = new ColumnVisibilityState("Date Modified", savedWidth: ColumnDateModified.Width),
+                [ColumnDateCreated] = new ColumnVisibilityState("Date Created", savedWidth: ColumnDateCreated.Width),
+                [ColumnExtension] = new ColumnVisibilityState("Ext", savedWidth: ColumnExtension.Width),
+                [ColumnTypeName] = new ColumnVisibilityState("Type", savedWidth: ColumnTypeName.Width),
+            };
+
+            foreach (var pair in _columnVisibility)
+                _defaultColumnWidths[pair.Key] = pair.Key.Width;
+
+            if (ResultsListView.View is GridView gridView)
+                gridView.ColumnHeaderContextMenu = BuildHeaderContextMenu();
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
             _searchState.PropertyChanged += OnSearchStateChanged;
             _session.Start();
+            ApplyColumnVisibilityFromSettings();
             UpdateSortGlyphs();
         }
 
@@ -78,6 +107,11 @@ namespace EverythingToolbar.Controls
 
         private void OnColumnHeaderClick(object sender, RoutedEventArgs e)
         {
+            // GridViewColumnHeader.Click only fires for the left button; guard anyway so a
+            // right-click (the header context menu) can never trigger a sort change.
+            if (Mouse.RightButton == MouseButtonState.Pressed)
+                return;
+
             if (e.OriginalSource is not GridViewColumnHeader header || header.Column == null)
                 return;
 
@@ -89,6 +123,110 @@ namespace EverythingToolbar.Controls
                 _searchState.SetSort(sort.SortBy, sort.Descending);
             else
                 _searchState.ResetSort();
+        }
+
+        /// <summary>
+        /// Builds the right-click context menu shown on the results column headers: one checkable
+        /// entry per hideable column plus a "Reset Columns" entry. The Name column is not listed
+        /// (Everything does not allow hiding the first column).
+        /// </summary>
+        private ContextMenu BuildHeaderContextMenu()
+        {
+            var menu = new ContextMenu();
+            foreach (var pair in _columnVisibility)
+            {
+                var item = new MenuItem
+                {
+                    Header = pair.Value.ColumnName,
+                    IsCheckable = true,
+                    Tag = pair.Key,
+                };
+                item.IsChecked = IsColumnVisible(pair.Key);
+                item.Click += OnColumnVisibilityMenuItemClick;
+                menu.Items.Add(item);
+            }
+
+            var reset = new MenuItem { Header = "Reset Columns" };
+            reset.Click += OnResetColumnsClick;
+            menu.Items.Add(reset);
+            return menu;
+        }
+
+        private void OnColumnVisibilityMenuItemClick(object sender, RoutedEventArgs e)
+        {
+            if (sender is not MenuItem item || item.Tag is not GridViewColumn column)
+                return;
+            if (!_columnVisibility.TryGetValue(column, out var state))
+                return;
+
+            var visible = !IsColumnVisible(column);
+            SetColumnVisible(column, visible);
+            column.Width = state.SetVisible(visible, column.Width);
+        }
+
+        private void OnResetColumnsClick(object sender, RoutedEventArgs e)
+        {
+            foreach (var pair in _columnVisibility)
+            {
+                SetColumnVisible(pair.Key, true);
+                pair.Key.Width = pair.Value.ResetTo(_defaultColumnWidths[pair.Key]);
+            }
+
+            RefreshHeaderContextMenuCheckedStates();
+        }
+
+        private void RefreshHeaderContextMenuCheckedStates()
+        {
+            if (ResultsListView.View is not GridView gridView || gridView.ColumnHeaderContextMenu == null)
+                return;
+
+            foreach (var item in gridView.ColumnHeaderContextMenu.Items.OfType<MenuItem>())
+            {
+                if (item.Tag is GridViewColumn column)
+                    item.IsChecked = IsColumnVisible(column);
+            }
+        }
+
+        private void ApplyColumnVisibilityFromSettings()
+        {
+            foreach (var pair in _columnVisibility)
+            {
+                var visible = IsColumnVisible(pair.Key);
+                pair.Key.Width = pair.Value.SetVisible(visible, pair.Key.Width);
+            }
+        }
+
+        private bool IsColumnVisible(GridViewColumn column)
+        {
+            if (column == ColumnPath)
+                return _settings.IsPathColumnVisible;
+            if (column == ColumnSize)
+                return _settings.IsSizeColumnVisible;
+            if (column == ColumnDateModified)
+                return _settings.IsDateModifiedColumnVisible;
+            if (column == ColumnDateCreated)
+                return _settings.IsDateCreatedColumnVisible;
+            if (column == ColumnExtension)
+                return _settings.IsExtensionColumnVisible;
+            if (column == ColumnTypeName)
+                return _settings.IsTypeNameColumnVisible;
+            return true;
+        }
+
+        private void SetColumnVisible(GridViewColumn column, bool value)
+        {
+            if (column == ColumnPath)
+                _settings.IsPathColumnVisible = value;
+            else if (column == ColumnSize)
+                _settings.IsSizeColumnVisible = value;
+            else if (column == ColumnDateModified)
+                _settings.IsDateModifiedColumnVisible = value;
+            else if (column == ColumnDateCreated)
+                _settings.IsDateCreatedColumnVisible = value;
+            else if (column == ColumnExtension)
+                _settings.IsExtensionColumnVisible = value;
+            else if (column == ColumnTypeName)
+                _settings.IsTypeNameColumnVisible = value;
         }
 
         private void UpdateSortGlyphs()

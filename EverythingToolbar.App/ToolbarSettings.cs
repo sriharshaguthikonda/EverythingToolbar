@@ -187,5 +187,23 @@ namespace EverythingToolbar.App
 
         [Option(DefaultValue = false)]
         bool IsFolderSidebarEnabled { get; set; }
+
+        [Option(DefaultValue = true)]
+        bool IsPathColumnVisible { get; set; }
+
+        [Option(DefaultValue = true)]
+        bool IsSizeColumnVisible { get; set; }
+
+        [Option(DefaultValue = true)]
+        bool IsDateModifiedColumnVisible { get; set; }
+
+        [Option(DefaultValue = true)]
+        bool IsDateCreatedColumnVisible { get; set; }
+
+        [Option(DefaultValue = true)]
+        bool IsExtensionColumnVisible { get; set; }
+
+        [Option(DefaultValue = true)]
+        bool IsTypeNameColumnVisible { get; set; }
     }
 }
