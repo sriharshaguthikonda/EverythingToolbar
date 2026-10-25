@@ -23,7 +23,11 @@ namespace EverythingToolbar.Platform.Search
         private const uint PropertyIdName = 0;
         private const uint PropertyIdPath = 1;
         private const uint PropertyIdSize = 2;
+        private const uint PropertyIdExtension = 3;
+        private const uint PropertyIdTypeName = 4;
         private const uint PropertyIdDateModified = 5;
+        private const uint PropertyIdDateCreated = 6;
+        private const uint PropertyIdAttributes = 8;
         private const uint PropertyIdPathAndName = 240;
 
         private readonly object _gate = new();
@@ -267,6 +271,10 @@ namespace EverythingToolbar.Platform.Search
                 Everything3_AddSearchPropertyRequestHighlighted(searchState, PropertyIdPath);
                 Everything3_AddSearchPropertyRequest(searchState, PropertyIdSize);
                 Everything3_AddSearchPropertyRequest(searchState, PropertyIdDateModified);
+                Everything3_AddSearchPropertyRequest(searchState, PropertyIdExtension);
+                Everything3_AddSearchPropertyRequest(searchState, PropertyIdTypeName);
+                Everything3_AddSearchPropertyRequest(searchState, PropertyIdDateCreated);
+                Everything3_AddSearchPropertyRequest(searchState, PropertyIdAttributes);
                 Everything3_SetSearchViewportOffset(searchState, offset);
                 Everything3_SetSearchViewportCount(searchState, (nuint)pageSize);
 
@@ -311,6 +319,13 @@ namespace EverythingToolbar.Platform.Search
                 var fileSize = Everything3_GetResultSize(_resultList, i);
                 var dateModified = Everything3_GetResultDateModified(_resultList, i);
 
+                var extensionLength = Everything3_GetResultExtensionW(_resultList, i, buffer, PathBufferLength);
+                var extension = TextFromNativeLength(extensionLength, PathBufferLength, () => new string(buffer));
+                var typeNameLength = Everything3_GetResultTypeW(_resultList, i, buffer, PathBufferLength);
+                var typeName = TextFromNativeLength(typeNameLength, PathBufferLength, () => new string(buffer));
+                var dateCreated = DateCreatedFromNative(Everything3_GetResultDateCreated(_resultList, i));
+                var attributes = AttributesFromNative(Everything3_GetResultAttributes(_resultList, i));
+
                 results.Add(
                     new SearchResult(
                         highlightedPath,
@@ -318,7 +333,11 @@ namespace EverythingToolbar.Platform.Search
                         fullPathAndFileName,
                         isFile,
                         fileSize == ulong.MaxValue ? -1 : (long)fileSize,
-                        ToFileTime(dateModified)
+                        ToFileTime(dateModified),
+                        extension,
+                        typeName,
+                        dateCreated,
+                        attributes
                     )
                 );
             }
@@ -348,6 +367,47 @@ namespace EverythingToolbar.Platform.Search
                 dwLowDateTime = (int)(fileTime & 0xFFFFFFFF),
                 dwHighDateTime = (int)(fileTime >> 32),
             };
+        }
+
+        /// <summary>
+        /// Maps a native string property read (e.g. extension or type name, EVERYTHING3_PSTRING)
+        /// to a nullable string. An empty/error length (including EVERYTHING3_ERROR_PROPERTY_NOT_FOUND)
+        /// yields null; otherwise the buffer contents are truncated to the reported length.
+        /// </summary>
+        public static string? TextFromNativeLength(ulong length, ulong bufferLength, Func<string> readBuffer)
+        {
+            if (length == 0 || bufferLength == 0)
+                return null;
+
+            var value = readBuffer();
+            var charCount = (int)Math.Min(length, bufferLength - 1);
+            if (charCount <= 0)
+                return null;
+
+            return value.Length <= charCount ? value : value[..charCount];
+        }
+
+        /// <summary>
+        /// Maps a native UINT64 FILETIME property value (e.g. EVERYTHING3_PROPERTY_ID_DATE_CREATED)
+        /// to a nullable DateTime. EVERYTHING3_UINT64_MAX (property unavailable or
+        /// EVERYTHING3_ERROR_PROPERTY_NOT_FOUND) yields null.
+        /// </summary>
+        public static DateTime? DateCreatedFromNative(ulong fileTime)
+        {
+            if (fileTime == ulong.MaxValue || fileTime == 0)
+                return null;
+
+            return DateTime.FromFileTime((long)fileTime);
+        }
+
+        /// <summary>
+        /// Maps a native DWORD property value (e.g. EVERYTHING3_PROPERTY_ID_ATTRIBUTES) to a
+        /// nullable uint. EVERYTHING3_DWORD_MAX (property unavailable or
+        /// EVERYTHING3_ERROR_PROPERTY_NOT_FOUND) yields null.
+        /// </summary>
+        public static uint? AttributesFromNative(uint attributes)
+        {
+            return attributes == uint.MaxValue ? null : attributes;
         }
 
         private static uint ToPropertyId(SortBy sortBy) =>
@@ -520,6 +580,28 @@ namespace EverythingToolbar.Platform.Search
 
         [DllImport("Everything3.dll")]
         private static extern ulong Everything3_GetResultDateModified(IntPtr resultList, nuint resultIndex);
+
+        [DllImport("Everything3.dll", CharSet = CharSet.Unicode)]
+        private static extern unsafe nuint Everything3_GetResultExtensionW(
+            IntPtr resultList,
+            nuint resultIndex,
+            char* lpString,
+            nuint maxCount
+        );
+
+        [DllImport("Everything3.dll", CharSet = CharSet.Unicode)]
+        private static extern unsafe nuint Everything3_GetResultTypeW(
+            IntPtr resultList,
+            nuint resultIndex,
+            char* lpString,
+            nuint maxCount
+        );
+
+        [DllImport("Everything3.dll")]
+        private static extern ulong Everything3_GetResultDateCreated(IntPtr resultList, nuint resultIndex);
+
+        [DllImport("Everything3.dll")]
+        private static extern uint Everything3_GetResultAttributes(IntPtr resultList, nuint resultIndex);
 
         [DllImport("Everything3.dll")]
         private static extern bool Everything3_IsFolderResult(IntPtr resultList, nuint resultIndex);
