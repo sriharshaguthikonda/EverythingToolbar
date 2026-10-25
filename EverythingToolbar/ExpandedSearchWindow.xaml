@@ -139,6 +139,11 @@
           InputGestureText="Ctrl+Shift+R"
           IsCheckable="True"
           IsChecked="{Binding Source={markup:Service {x:Type appsearch:SearchState}}, Path=IsRegExEnabled, Mode=OneWay}" />
+        <Separator />
+        <MenuItem
+          Click="OnAdvancedSearchClick"
+          Header="Advanced Search…"
+          InputGestureText="Ctrl+Shift+A" />
       </MenuItem>
       <MenuItem
         x:Name="BookmarksMenu"

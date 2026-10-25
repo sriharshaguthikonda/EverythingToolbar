@@ -163,6 +163,10 @@ namespace EverythingToolbar
             {
                 switch (e.Key)
                 {
+                    case Key.A:
+                        ShowAdvancedSearch();
+                        e.Handled = true;
+                        return;
                     case Key.W:
                         _settings.IsMatchWholeWord = !_settings.IsMatchWholeWord;
                         e.Handled = true;
@@ -227,6 +231,18 @@ namespace EverythingToolbar
         private void OnEditDeleteClick(object sender, RoutedEventArgs e)
         {
             _editOperations.Delete(ResultsView.GetSelectedResults());
+        }
+
+        private void OnAdvancedSearchClick(object sender, RoutedEventArgs e)
+        {
+            ShowAdvancedSearch();
+        }
+
+        private void ShowAdvancedSearch()
+        {
+            var dialog = new App.AdvancedSearchDialog(_searchState) { Owner = Window.GetWindow(this) };
+            dialog.ShowDialog();
+            FocusSearchBox();
         }
 
         private void OnNewWindowClick(object sender, RoutedEventArgs e)
