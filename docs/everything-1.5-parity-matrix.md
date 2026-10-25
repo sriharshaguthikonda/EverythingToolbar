@@ -68,7 +68,7 @@ Current-implementation evidence cites fork source (branch `fix/typo-vocabulary-b
 
 | Feature | Reference behaviour | Version | Current implementation | Status | Backend interface | Prior art | Work required |
 |---|---|---|---|---|---|---|---|
-| Search bookmarks (name+query+filter+sort) | Bookmarks menu, bookmark bar | all | Missing | Missing | local ini | Everything format | bookmark store + menu + bar |
+| Search bookmarks (name+query+filter+sort) | Bookmarks menu, bookmark bar | all | Implemented (commit f88866b): Bookmarks menu in expanded window, Add Bookmark… (Ctrl+D, themed dialog prefilled with query), alphabetical items run into active tab (term+filter+sort, flags untouched), Remove submenu, (no bookmarks) placeholder; bookmarks.json versioned/atomic/corrupt-safe | Partial — implemented, live check pending | local (SDK3 has NO bookmark API — verified) | native design mirroring SearchTabStore | bookmark bar; organize dialog; import Everything's own bookmarks (ini parse) |
 | Sessions (saved search states) | 1.5 sessions | 1.5 | Missing | Missing | local | — | JSON session store |
 | Export results (CSV/TXT/EFU) | File > Export | all | Missing | Missing | SDK rows local export or Everything.exe -export | es.exe export behaviour | export writer from result stream |
 | Find Windows tools (Index Journal, File List Editor) | Tools menu | 1.5 | Missing | Delegated | launch Everything.exe flags | — | menu items launching backend tools |
