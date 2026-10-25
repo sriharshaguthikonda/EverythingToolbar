@@ -43,7 +43,7 @@ Current-implementation evidence cites fork source (branch `fix/typo-vocabulary-b
 | Feature | Reference behaviour | Version | Current implementation | Status | Backend interface | Prior art | Work required |
 |---|---|---|---|---|---|---|---|
 | Open / Open path | Double-click opens; Open file location | all | `SearchResultActions.cs` (App/Search) | Full | shell | existing | — |
-| Native context menu (shell IContextMenu) | Full Explorer menu incl. extensions | all | quick actions menu only | Partial | shell IContextMenu | SearchLight, Files, Lertaro | IContextMenu COM host for WPF |
+| Native context menu (shell IContextMenu) | Full Explorer menu incl. extensions | all | `Platform/Shell/ShellContextMenuService.cs` (commit a818812, adapted from Lertaro MIT): full menu on right-click/Shift+F10 in expanded window, acts on whole selection (Extended multi-select), owner-draw subclassing, failures logged. Popup keeps quick-actions | Partial — implemented, live check pending | shell IContextMenu | Lertaro `App/services/ShellMenu/Presenter/ShellContextMenuHelper.cs` (MIT, REUSE-grade) | live acceptance; drag-drop context menu |
 | Copy name / copy path | Edit menu | all | exists (quick actions) | Full | local | existing | — |
 | Rename (single) | inline/field dialog | all | Missing | Missing | shell | Files | — |
 | Advanced Rename / batch rename with preview | 1.5 dialog (-copyto/-moveto/-rename) | 1.5 | Missing | Missing | shell IFileOperation + local pattern engine | PowerToys PowerRename (MIT) | ADAPT PowerRename pattern engine or invoke Everything.exe -rename on selection |
