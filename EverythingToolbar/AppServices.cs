@@ -103,6 +103,7 @@ namespace EverythingToolbar
                 .AddSingleton<StartMenuSearchInterceptor>()
                 .AddSingleton<GlobalShortcutListener>()
                 .AddSingleton<SearchWindow>()
+                .AddSingleton<ExpandedSearchWindow>()
                 .AddSingleton<SearchWindowController>()
                 .AddSingleton<ISearchWindowController>(sp => sp.GetRequiredService<SearchWindowController>())
                 .AddSingleton<SearchHost>();

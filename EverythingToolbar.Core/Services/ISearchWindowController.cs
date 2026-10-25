@@ -7,5 +7,9 @@ namespace EverythingToolbar.Core.Services
         void Hide();
 
         void Toggle();
+
+        void ShowExpanded();
+
+        void ToggleExpanded();
     }
 }

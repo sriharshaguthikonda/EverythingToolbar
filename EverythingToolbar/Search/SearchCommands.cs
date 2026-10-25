@@ -194,5 +194,19 @@ namespace EverythingToolbar.Search
             if (clearSelection)
                 _session.ClearSelection();
         }
+
+        public void ExpandWindow() => _controller.ShowExpanded();
+
+        private ICommand? _expandWindowCommand;
+        public ICommand ExpandWindowCommand => _expandWindowCommand ??= new SimpleCommand(ExpandWindow);
+
+        private sealed class SimpleCommand(Action execute) : ICommand
+        {
+            public event EventHandler? CanExecuteChanged;
+
+            public bool CanExecute(object? parameter) => true;
+
+            public void Execute(object? parameter) => execute();
+        }
     }
 }

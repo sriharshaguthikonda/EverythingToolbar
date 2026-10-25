@@ -68,6 +68,10 @@ namespace EverythingToolbar.Services
 
         public void Toggle() => RunOnUi(ToggleInternal);
 
+        public void ShowExpanded() => RunOnUi(ShowExpandedInternal);
+
+        public void ToggleExpanded() => RunOnUi(ToggleExpandedInternal);
+
         public void Dismiss() =>
             RunOnUi(() =>
             {
@@ -201,6 +205,36 @@ namespace EverythingToolbar.Services
                 ShowInternal(atCursor: false);
             else
                 HideInternal();
+        }
+
+        private ExpandedSearchWindow? _expandedWindow;
+
+        private void ShowExpandedInternal()
+        {
+            if (_expandedWindow == null)
+            {
+                _expandedWindow = Ioc.Default.GetRequiredService<ExpandedSearchWindow>();
+                _expandedWindow.Closed += OnExpandedWindowClosed;
+            }
+
+            _expandedWindow.Show();
+            _expandedWindow.Activate();
+            _expandedWindow.FocusSearchBox();
+        }
+
+        private void ToggleExpandedInternal()
+        {
+            if (_expandedWindow is { IsVisible: true })
+                _expandedWindow.Close();
+            else
+                ShowExpandedInternal();
+        }
+
+        private void OnExpandedWindowClosed(object? sender, EventArgs e)
+        {
+            if (_expandedWindow != null)
+                _expandedWindow.Closed -= OnExpandedWindowClosed;
+            _expandedWindow = null;
         }
 
         private void SetTemporaryPopupMode(bool value)

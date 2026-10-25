@@ -1,0 +1,137 @@
+﻿<UserControl
+  x:Class="EverythingToolbar.Controls.SearchResultsDataView"
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:appsearch="clr-namespace:EverythingToolbar.App.Search;assembly=EverythingToolbar.App"
+  xmlns:b="clr-namespace:EverythingToolbar.Behaviors"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:h="clr-namespace:EverythingToolbar.Helpers"
+  xmlns:markup="clr-namespace:EverythingToolbar.Markup"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  d:DesignHeight="300"
+  d:DesignWidth="600"
+  Loaded="OnLoaded"
+  Unloaded="OnUnloaded"
+  mc:Ignorable="d">
+  <UserControl.Resources>
+    <DataTemplate x:Key="NameCellTemplate">
+      <StackPanel Orientation="Horizontal">
+        <Image
+          Width="16"
+          Height="16"
+          VerticalAlignment="Center"
+          b:ResultIcon.Result="{Binding Mode=OneTime}" />
+        <TextBlock
+          Margin="6 0 0 0"
+          VerticalAlignment="Center"
+          h:HighlightedText.Source="{Binding HighlightedFileName, Mode=OneTime}"
+          Foreground="{DynamicResource SearchResultFileName}"
+          TextTrimming="CharacterEllipsis"
+          ToolTip="{Binding FileName, Mode=OneTime}" />
+      </StackPanel>
+    </DataTemplate>
+    <DataTemplate x:Key="PathCellTemplate">
+      <TextBlock
+        VerticalAlignment="Center"
+        h:HighlightedText.Source="{Binding HighlightedPath, Mode=OneTime}"
+        Foreground="{DynamicResource SearchResultPath}"
+        TextTrimming="CharacterEllipsis"
+        ToolTip="{Binding Path, Mode=OneTime}" />
+    </DataTemplate>
+    <DataTemplate x:Key="SizeCellTemplate">
+      <TextBlock
+        VerticalAlignment="Center"
+        Foreground="{DynamicResource SearchResultFileSize}"
+        Text="{Binding HumanReadableFileSize, Mode=OneTime}" />
+    </DataTemplate>
+    <DataTemplate x:Key="DateModifiedCellTemplate">
+      <TextBlock
+        VerticalAlignment="Center"
+        Foreground="{DynamicResource SearchResultDateModified}"
+        Text="{Binding HumanReadableDateModified, Mode=OneTime}" />
+    </DataTemplate>
+    <DataTemplate x:Key="DateCreatedCellTemplate">
+      <TextBlock
+        VerticalAlignment="Center"
+        Foreground="{DynamicResource SearchResultDateModified}"
+        Text="{Binding DateCreated, Mode=OneTime, TargetNullValue=''}" />
+    </DataTemplate>
+    <DataTemplate x:Key="ExtensionCellTemplate">
+      <TextBlock
+        VerticalAlignment="Center"
+        Foreground="{DynamicResource SearchResultPath}"
+        Text="{Binding Extension, Mode=OneTime, TargetNullValue=''}" />
+    </DataTemplate>
+    <DataTemplate x:Key="TypeNameCellTemplate">
+      <TextBlock
+        VerticalAlignment="Center"
+        Foreground="{DynamicResource SearchResultPath}"
+        Text="{Binding TypeName, Mode=OneTime, TargetNullValue=''}" />
+    </DataTemplate>
+  </UserControl.Resources>
+
+  <ListView
+    Name="ResultsListView"
+    HorizontalContentAlignment="Stretch"
+    Background="{DynamicResource SearchResultsViewBackground}"
+    BorderThickness="0"
+    DataContext="{Binding Source={markup:Service {x:Type appsearch:SearchSession}}}"
+    FocusVisualStyle="{x:Null}"
+    IsSynchronizedWithCurrentItem="True"
+    IsTextSearchEnabled="False"
+    ItemsSource="{Binding Results}"
+    PreviewKeyDown="OnListKeyDown"
+    PreviewMouseDoubleClick="OnListDoubleClick"
+    ScrollViewer.CanContentScroll="True"
+    ScrollViewer.HorizontalScrollBarVisibility="Auto"
+    ScrollViewer.PanningMode="VerticalOnly"
+    ScrollViewer.VerticalScrollBarVisibility="Visible"
+    SelectedIndex="{Binding SelectedIndex, Mode=TwoWay}"
+    SelectedItem="{Binding RelativeSource={RelativeSource AncestorType={x:Type UserControl}}, Path=SelectedResult, Mode=TwoWay}"
+    SelectionMode="Single"
+    VirtualizingPanel.CacheLength="1"
+    VirtualizingPanel.CacheLengthUnit="Page"
+    VirtualizingPanel.IsVirtualizing="True"
+    VirtualizingPanel.ScrollUnit="Item"
+    VirtualizingPanel.VirtualizationMode="Recycling">
+    <ListView.View>
+      <GridView AllowsColumnReorder="True">
+        <GridViewColumn
+          x:Name="ColumnName"
+          Width="280"
+          CellTemplate="{StaticResource NameCellTemplate}"
+          Header="Name" />
+        <GridViewColumn
+          x:Name="ColumnPath"
+          Width="260"
+          CellTemplate="{StaticResource PathCellTemplate}"
+          Header="Path" />
+        <GridViewColumn
+          x:Name="ColumnSize"
+          Width="80"
+          CellTemplate="{StaticResource SizeCellTemplate}"
+          Header="Size" />
+        <GridViewColumn
+          x:Name="ColumnDateModified"
+          Width="150"
+          CellTemplate="{StaticResource DateModifiedCellTemplate}"
+          Header="Date Modified" />
+        <GridViewColumn
+          x:Name="ColumnDateCreated"
+          Width="150"
+          CellTemplate="{StaticResource DateCreatedCellTemplate}"
+          Header="Date Created" />
+        <GridViewColumn
+          x:Name="ColumnExtension"
+          Width="70"
+          CellTemplate="{StaticResource ExtensionCellTemplate}"
+          Header="Ext" />
+        <GridViewColumn
+          x:Name="ColumnTypeName"
+          Width="140"
+          CellTemplate="{StaticResource TypeNameCellTemplate}"
+          Header="Type" />
+      </GridView>
+    </ListView.View>
+  </ListView>
+</UserControl>

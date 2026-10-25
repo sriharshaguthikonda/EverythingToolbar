@@ -1,0 +1,244 @@
+﻿<Window
+  x:Class="EverythingToolbar.ExpandedSearchWindow"
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:appsearch="clr-namespace:EverythingToolbar.App.Search;assembly=EverythingToolbar.App"
+  xmlns:b="clr-namespace:EverythingToolbar.Behaviors"
+  xmlns:c="clr-namespace:EverythingToolbar.Converters"
+  xmlns:controls="clr-namespace:EverythingToolbar.Controls"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+  xmlns:markup="clr-namespace:EverythingToolbar.Markup"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  Title="EverythingToolbar Search"
+  Width="1100"
+  Height="700"
+  MinWidth="900"
+  MinHeight="600"
+  d:DesignHeight="600"
+  d:DesignWidth="900"
+  Background="{DynamicResource ApplicationBackgroundBrush}"
+  PreviewKeyDown="OnPreviewKeyDown"
+  ShowInTaskbar="True"
+  UseLayoutRounding="True"
+  WindowStartupLocation="CenterScreen"
+  mc:Ignorable="d">
+  <i:Interaction.Behaviors>
+    <b:Themed Surface="AppWindow" />
+  </i:Interaction.Behaviors>
+
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+
+    <Menu
+      Grid.Row="0"
+      Background="{DynamicResource SearchWindowBackground}"
+      Foreground="{DynamicResource SearchResultFileName}">
+      <MenuItem Header="File">
+        <MenuItem
+          Click="OnNewWindowClick"
+          Header="New Window"
+          InputGestureText="Ctrl+Shift+E" />
+        <Separator />
+        <MenuItem
+          Click="OnCloseClick"
+          Header="Close"
+          InputGestureText="Alt+F4" />
+      </MenuItem>
+      <MenuItem Header="View">
+        <MenuItem
+          Click="OnTogglePreviewClick"
+          Header="Toggle Preview"
+          InputGestureText="Ctrl+P" />
+        <MenuItem Click="OnToggleStatusBarClick" Header="Toggle Status Bar" />
+      </MenuItem>
+      <MenuItem Header="Search">
+        <MenuItem
+          Click="OnToggleMatchCaseClick"
+          Header="Match Case"
+          InputGestureText="Ctrl+Shift+C"
+          IsCheckable="True"
+          IsChecked="{Binding Source={markup:Service {x:Type appsearch:SearchState}}, Path=IsMatchCase, Mode=OneWay}" />
+        <MenuItem
+          Click="OnToggleMatchWholeWordClick"
+          Header="Match Whole Word"
+          InputGestureText="Ctrl+Shift+W"
+          IsCheckable="True"
+          IsChecked="{Binding Source={markup:Service {x:Type appsearch:SearchState}}, Path=IsMatchWholeWord, Mode=OneWay}" />
+        <MenuItem
+          Click="OnToggleMatchPathClick"
+          Header="Match Path"
+          InputGestureText="Ctrl+Shift+U"
+          IsCheckable="True"
+          IsChecked="{Binding Source={markup:Service {x:Type appsearch:SearchState}}, Path=IsMatchPath, Mode=OneWay}" />
+        <MenuItem
+          Click="OnToggleRegexClick"
+          Header="Regex"
+          InputGestureText="Ctrl+Shift+R"
+          IsCheckable="True"
+          IsChecked="{Binding Source={markup:Service {x:Type appsearch:SearchState}}, Path=IsRegExEnabled, Mode=OneWay}" />
+      </MenuItem>
+      <MenuItem Header="Help">
+        <MenuItem Click="OnAboutClick" Header="About" />
+      </MenuItem>
+    </Menu>
+
+    <Grid Grid.Row="1" Margin="8 8 8 0">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="Auto" />
+      </Grid.ColumnDefinitions>
+      <controls:SearchBox
+        x:Name="SearchBox"
+        Grid.Column="0"
+        Height="40"
+        VerticalAlignment="Top"
+        SearchTerm="{Binding Source={markup:Service {x:Type appsearch:SearchState}}, Path=SearchTerm, Mode=TwoWay}" />
+      <controls:FilterSelector
+        x:Name="FilterSelector"
+        Grid.Column="1"
+        Margin="8 0 0 0"
+        VerticalAlignment="Center"
+        SelectedFilter="{Binding Source={markup:Service {x:Type appsearch:SearchState}}, Path=Filter, Mode=TwoWay}" />
+    </Grid>
+
+    <Grid Grid.Row="2" Margin="8 8 8 0">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="Auto" />
+      </Grid.ColumnDefinitions>
+      <controls:SearchResultsDataView x:Name="ResultsView" Grid.Column="0" />
+      <controls:SearchResultPreviewPane
+        x:Name="PreviewPane"
+        Grid.Column="1"
+        Width="380"
+        Margin="8 0 0 0"
+        SelectedResult="{Binding ElementName=ResultsView, Path=SelectedResult}" />
+    </Grid>
+
+    <Border
+      x:Name="StatusBar"
+      Grid.Row="3"
+      Padding="8 4 8 4"
+      Background="{DynamicResource SearchWindowBackground}"
+      BorderBrush="{DynamicResource TabBarBottomBorder}"
+      BorderThickness="0 1 0 0">
+      <Grid>
+        <StackPanel HorizontalAlignment="Left" Orientation="Horizontal">
+          <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource SearchResultPath}">
+            <Run Text="{Binding Source={markup:Service {x:Type appsearch:SearchSession}}, Path=TotalCount, Mode=OneWay, Converter={c:SearchResultsCountConverter}}" />
+          </TextBlock>
+          <TextBlock
+            VerticalAlignment="Center"
+            Foreground="{DynamicResource SearchResultPath}"
+            Text="Searching…">
+            <TextBlock.Style>
+              <Style TargetType="TextBlock">
+                <Setter Property="Visibility" Value="Collapsed" />
+                <Setter Property="Margin" Value="8 0 0 0" />
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding Source={markup:Service {x:Type appsearch:SearchSession}}, Path=IsBusy}" Value="True">
+                    <Setter Property="Visibility" Value="Visible" />
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </TextBlock.Style>
+          </TextBlock>
+          <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource SearchResultPath}">
+            <TextBlock.Style>
+              <Style TargetType="TextBlock">
+                <Setter Property="Visibility" Value="Visible" />
+                <Setter Property="Margin" Value="8 0 0 0" />
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding Source={markup:Service {x:Type appsearch:SearchSession}}, Path=FallbackHint}" Value="{x:Null}">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </TextBlock.Style>
+            <Run Text="{Binding Source={markup:Service {x:Type appsearch:SearchSession}}, Path=FallbackHint, Mode=OneWay}" />
+          </TextBlock>
+        </StackPanel>
+        <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+          <StackPanel.Resources>
+            <Style x:Key="ChipStyle" TargetType="TextBlock">
+              <Setter Property="Margin" Value="6 0 0 0" />
+              <Setter Property="Opacity" Value="0.4" />
+              <Setter Property="Foreground" Value="{DynamicResource SearchResultPath}" />
+              <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                  <Setter Property="Opacity" Value="0.8" />
+                </Trigger>
+              </Style.Triggers>
+            </Style>
+          </StackPanel.Resources>
+          <TextBlock
+            MouseLeftButtonDown="OnChipClick"
+            Tag="Case"
+            Text="CASE">
+            <TextBlock.Style>
+              <Style BasedOn="{StaticResource ChipStyle}" TargetType="TextBlock">
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding Source={markup:Service {x:Type appsearch:SearchState}}, Path=IsMatchCase}" Value="True">
+                    <Setter Property="Opacity" Value="1" />
+                    <Setter Property="FontWeight" Value="Bold" />
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </TextBlock.Style>
+          </TextBlock>
+          <TextBlock
+            MouseLeftButtonDown="OnChipClick"
+            Tag="Word"
+            Text="WORD">
+            <TextBlock.Style>
+              <Style BasedOn="{StaticResource ChipStyle}" TargetType="TextBlock">
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding Source={markup:Service {x:Type appsearch:SearchState}}, Path=IsMatchWholeWord}" Value="True">
+                    <Setter Property="Opacity" Value="1" />
+                    <Setter Property="FontWeight" Value="Bold" />
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </TextBlock.Style>
+          </TextBlock>
+          <TextBlock
+            MouseLeftButtonDown="OnChipClick"
+            Tag="Path"
+            Text="PATH">
+            <TextBlock.Style>
+              <Style BasedOn="{StaticResource ChipStyle}" TargetType="TextBlock">
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding Source={markup:Service {x:Type appsearch:SearchState}}, Path=IsMatchPath}" Value="True">
+                    <Setter Property="Opacity" Value="1" />
+                    <Setter Property="FontWeight" Value="Bold" />
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </TextBlock.Style>
+          </TextBlock>
+          <TextBlock
+            MouseLeftButtonDown="OnChipClick"
+            Tag="Regex"
+            Text="REGEX">
+            <TextBlock.Style>
+              <Style BasedOn="{StaticResource ChipStyle}" TargetType="TextBlock">
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding Source={markup:Service {x:Type appsearch:SearchState}}, Path=IsRegExEnabled}" Value="True">
+                    <Setter Property="Opacity" Value="1" />
+                    <Setter Property="FontWeight" Value="Bold" />
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </TextBlock.Style>
+          </TextBlock>
+        </StackPanel>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

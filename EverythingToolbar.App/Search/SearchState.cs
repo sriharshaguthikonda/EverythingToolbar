@@ -108,6 +108,31 @@ namespace EverythingToolbar.App.Search
 
         public void UseSettingsSortDirection() => _useSettingsSortDirection = true;
 
+        /// <summary>
+        /// Applies an explicit sort (e.g. from a results column header click) that overrides the
+        /// filter defaults. Raises change notifications so the search session rebuilds.
+        /// </summary>
+        public void SetSort(SortBy sortBy, bool descending)
+        {
+            UseSettingsSortKey();
+            UseSettingsSortDirection();
+            _settings.SortBy = (int)sortBy;
+            _settings.IsSortDescending = descending;
+            OnPropertyChanged(nameof(SortBy));
+            OnPropertyChanged(nameof(IsSortDescending));
+            OnPropertyChanged(nameof(EffectiveSortBy));
+            OnPropertyChanged(nameof(EffectiveIsSortDescending));
+        }
+
+        /// <summary>Clears the explicit sort override and falls back to the filter/settings defaults.</summary>
+        public void ResetSort()
+        {
+            _useSettingsSortKey = false;
+            _useSettingsSortDirection = false;
+            OnPropertyChanged(nameof(EffectiveSortBy));
+            OnPropertyChanged(nameof(EffectiveIsSortDescending));
+        }
+
         private string ApplyMacros(string searchTerm)
         {
             var result = searchTerm;
