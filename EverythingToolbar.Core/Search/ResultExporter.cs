@@ -15,6 +15,13 @@ namespace EverythingToolbar.Core.Search
     }
 
     /// <summary>
+    /// One CSV export column: header text plus a value selector. Values returning null (or an
+    /// empty string) are written as empty CSV fields — never 0. Lambdas are non-capturing, so
+    /// the compiler caches each delegate; constructing the standard columns allocates once.
+    /// </summary>
+    public readonly record struct ExportColumn(string Header, Func<SearchResult, string?> Value);
+
+    /// <summary>
     /// Pure, testable writer for search-result exports. Exposes whole-enumeration writers (which
     /// stream without materializing the set) plus per-row writers so services can interleave
     /// paging with writing. All text uses the encoding of the caller's TextWriter; the export
@@ -22,6 +29,64 @@ namespace EverythingToolbar.Core.Search
     /// </summary>
     public static class ResultExporter
     {
+        public static readonly ExportColumn FilenameColumn = new("Filename", r => r.FullPathAndFileName);
+
+        public static readonly ExportColumn PathColumn = new("Path", r => r.Path);
+
+        public static readonly ExportColumn NameColumn = new("Name", r => r.FileName);
+
+        public static readonly ExportColumn ExtensionColumn = new("Extension", r => r.Extension);
+
+        public static readonly ExportColumn SizeColumn = new(
+            "Size",
+            r => r.FileSize >= 0 ? r.FileSize.ToString(CultureInfo.InvariantCulture) : null
+        );
+
+        public static readonly ExportColumn DateModifiedColumn = new(
+            "Date Modified",
+            r => ToSortableString(FileTimeToLocalDateTime(r.DateModified))
+        );
+
+        public static readonly ExportColumn DateCreatedColumn = new(
+            "Date Created",
+            r => ToSortableString(r.DateCreated)
+        );
+
+        public static readonly ExportColumn AttributesColumn = new(
+            "Attributes",
+            r => r.Attributes?.ToString(CultureInfo.InvariantCulture)
+        );
+
+        public static readonly ExportColumn TypeColumn = new("Type", r => r.TypeName);
+
+        /// <summary>
+        /// Every column the Export dialog offers, in fixed display order. CSV column choice is a
+        /// checked subset of this list; the checked set is the choice (no reordering — output
+        /// always follows this order).
+        /// </summary>
+        public static readonly IReadOnlyList<ExportColumn> AvailableColumns = new[]
+        {
+            FilenameColumn,
+            PathColumn,
+            NameColumn,
+            ExtensionColumn,
+            SizeColumn,
+            DateModifiedColumn,
+            DateCreatedColumn,
+            AttributesColumn,
+            TypeColumn,
+        };
+
+        /// <summary>The historical (EFU-parity) default CSV column set.</summary>
+        public static readonly IReadOnlyList<ExportColumn> DefaultCsvColumns = new[]
+        {
+            FilenameColumn,
+            SizeColumn,
+            DateModifiedColumn,
+            DateCreatedColumn,
+            AttributesColumn,
+        };
+
         /// <summary>Everything's documented EFU header layout.</summary>
         public const string EfuHeader = "Filename,Size,Date Modified,Date Created,Attributes";
 
@@ -66,24 +131,45 @@ namespace EverythingToolbar.Core.Search
 
         public static void WriteCsv(TextWriter writer, IEnumerable<SearchResult> results)
         {
-            writer.WriteLine(CsvHeader);
+            WriteCsv(writer, results, DefaultCsvColumns);
+        }
+
+        /// <summary>
+        /// CSV export with an explicit column set: header line from the columns' headers (in the
+        /// given order, RFC 4180 quoted) plus one row per item. Column order in the output is the
+        /// order of <paramref name="columns"/>.
+        /// </summary>
+        public static void WriteCsv(
+            TextWriter writer,
+            IEnumerable<SearchResult> results,
+            IReadOnlyList<ExportColumn> columns
+        )
+        {
+            writer.WriteLine(CsvHeaderFor(columns));
             foreach (var result in results)
-                WriteCsvRow(writer, result);
+                WriteCsvRow(writer, result, columns);
+        }
+
+        /// <summary>Header line for the given column set (escaped, comma-joined).</summary>
+        public static string CsvHeaderFor(IReadOnlyList<ExportColumn> columns)
+        {
+            var headers = new string[columns.Count];
+            for (var i = 0; i < columns.Count; i++)
+                headers[i] = EscapeCsvField(columns[i].Header);
+            return string.Join(",", headers);
         }
 
         public static void WriteCsvRow(TextWriter writer, SearchResult result)
         {
-            var dateModified = FileTimeToLocalDateTime(result.DateModified);
-            writer.WriteLine(
-                string.Join(
-                    ",",
-                    EscapeCsvField(result.FullPathAndFileName),
-                    result.FileSize >= 0 ? result.FileSize.ToString(CultureInfo.InvariantCulture) : "",
-                    EscapeCsvField(ToSortableString(dateModified)),
-                    EscapeCsvField(ToSortableString(result.DateCreated)),
-                    result.Attributes.HasValue ? result.Attributes.Value.ToString(CultureInfo.InvariantCulture) : ""
-                )
-            );
+            WriteCsvRow(writer, result, DefaultCsvColumns);
+        }
+
+        public static void WriteCsvRow(TextWriter writer, SearchResult result, IReadOnlyList<ExportColumn> columns)
+        {
+            var fields = new string[columns.Count];
+            for (var i = 0; i < columns.Count; i++)
+                fields[i] = EscapeCsvField(columns[i].Value(result));
+            writer.WriteLine(string.Join(",", fields));
         }
 
         /// <summary>

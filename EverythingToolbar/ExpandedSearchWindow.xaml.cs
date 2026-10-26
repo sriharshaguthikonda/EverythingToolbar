@@ -813,12 +813,27 @@ namespace EverythingToolbar
             if (_exportCts is not null)
                 return;
 
+            // The Export dialog picks format + CSV columns first; the SaveFileDialog only asks
+            // where to put the already-decided format.
+            var session = Ioc.Default.GetRequiredService<App.Search.SearchSession>();
+            var exportDialog = new App.ExportDialog(session.TotalCount) { Owner = this };
+            if (exportDialog.ShowDialog() != true)
+                return;
+
+            var format = exportDialog.SelectedFormat;
+            var csvColumns = exportDialog.SelectedColumns;
+
             var searchTerm = _searchState.SearchTerm;
             var dialog = new Microsoft.Win32.SaveFileDialog
             {
                 Title = "Export Search Results",
                 Filter = "CSV file (*.csv)|*.csv|Text file (*.txt)|*.txt|EFU file list (*.efu)|*.efu",
-                FilterIndex = 1,
+                FilterIndex = format switch
+                {
+                    ExportFormat.Txt => 2,
+                    ExportFormat.Efu => 3,
+                    _ => 1,
+                },
                 DefaultExt = ".csv",
                 FileName = SanitizeFileName(searchTerm),
             };
@@ -826,12 +841,6 @@ namespace EverythingToolbar
             if (dialog.ShowDialog(this) != true)
                 return;
 
-            var format = dialog.FilterIndex switch
-            {
-                2 => ExportFormat.Txt,
-                3 => ExportFormat.Efu,
-                _ => ExportFormat.Csv,
-            };
             var expectedExtension = format switch
             {
                 ExportFormat.Txt => ".txt",
@@ -863,7 +872,14 @@ namespace EverythingToolbar
                         FileAccess.Write,
                         FileShare.None
                     );
-                    return await _exportService.ExportAsync(query, stream, format, progress, cancellationToken);
+                    return await _exportService.ExportAsync(
+                        query,
+                        stream,
+                        format,
+                        csvColumns,
+                        progress,
+                        cancellationToken
+                    );
                 });
 
                 if (cancellationToken.IsCancellationRequested)

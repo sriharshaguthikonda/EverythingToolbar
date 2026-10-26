@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -39,6 +40,23 @@ namespace EverythingToolbar.App.Search
             CancellationToken cancellationToken = default
         )
         {
+            return await ExportAsync(query, destination, format, null, progress, cancellationToken);
+        }
+
+        /// <summary>
+        /// Same as the overload above, with an explicit CSV column set (used by the Export
+        /// dialog). Ignored for TXT/EFU whose layouts are fixed; null selects the default CSV
+        /// columns. The CSV header line is written from the chosen columns.
+        /// </summary>
+        public async Task<int> ExportAsync(
+            SearchQuery query,
+            Stream destination,
+            ExportFormat format,
+            IReadOnlyList<ExportColumn>? csvColumns,
+            IProgress<int>? progress = null,
+            CancellationToken cancellationToken = default
+        )
+        {
             // UTF-8 with BOM for CSV/EFU keeps Excel happy; TXT is BOM-less UTF-8 (documented
             // choice). The stream stays open (leaveOpen: true); the writer is flushed + disposed.
             var encoding = format == ExportFormat.Txt ? new UTF8Encoding(false) : new UTF8Encoding(true);
@@ -50,6 +68,8 @@ namespace EverythingToolbar.App.Search
 
             if (format == ExportFormat.Efu)
                 writer.WriteLine(ResultExporter.EfuHeader);
+            else if (format == ExportFormat.Csv)
+                writer.WriteLine(ResultExporter.CsvHeaderFor(csvColumns ?? ResultExporter.DefaultCsvColumns));
 
             var exported = 0;
             for (var startIndex = 0; startIndex < totalCount; startIndex += PageSize)
@@ -66,7 +86,7 @@ namespace EverythingToolbar.App.Search
 
                 foreach (var result in page)
                 {
-                    WriteRow(writer, result, format);
+                    WriteRow(writer, result, format, csvColumns);
                     exported++;
                 }
 
@@ -76,12 +96,17 @@ namespace EverythingToolbar.App.Search
             return exported;
         }
 
-        private static void WriteRow(TextWriter writer, SearchResult result, ExportFormat format)
+        private static void WriteRow(
+            TextWriter writer,
+            SearchResult result,
+            ExportFormat format,
+            IReadOnlyList<ExportColumn>? csvColumns
+        )
         {
             switch (format)
             {
                 case ExportFormat.Csv:
-                    ResultExporter.WriteCsvRow(writer, result);
+                    ResultExporter.WriteCsvRow(writer, result, csvColumns ?? ResultExporter.DefaultCsvColumns);
                     break;
                 case ExportFormat.Txt:
                     ResultExporter.WriteTxtRow(writer, result);

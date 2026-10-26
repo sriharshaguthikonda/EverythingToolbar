@@ -22,7 +22,9 @@ namespace EverythingToolbar.FuzzySearch.Tests
             long size = -1,
             long dateModified = 0,
             DateTime? dateCreated = null,
-            uint? attributes = null
+            uint? attributes = null,
+            string? extension = null,
+            string? typeName = null
         )
         {
             return new SearchResult(
@@ -36,6 +38,8 @@ namespace EverythingToolbar.FuzzySearch.Tests
                     dwHighDateTime = (int)(dateModified >> 32),
                     dwLowDateTime = (int)(dateModified & 0xFFFFFFFF),
                 },
+                Extension: extension,
+                TypeName: typeName,
                 DateCreated: dateCreated,
                 Attributes: attributes
             );
@@ -157,6 +161,120 @@ namespace EverythingToolbar.FuzzySearch.Tests
 
             Assert.Equal(value, ResultExporter.FileTimeToLong(fileTime));
             Assert.Null(ResultExporter.FileTimeToLong(default));
+        }
+
+        private static ExportColumn? ColumnByHeader(string header)
+        {
+            return ResultExporter.AvailableColumns.FirstOrDefault(c => c.Header == header);
+        }
+
+        [Fact]
+        public void ExportColumns_FormatKnownValuesPerConvention()
+        {
+            // 2020-01-01 00:00:00 UTC in FILETIME ticks (100ns since 1601-01-01).
+            const long filetime = 132244224000000000;
+            var result = Result(
+                @"C:\docs\report.txt",
+                size: 12345,
+                dateModified: filetime,
+                dateCreated: DateTime.FromFileTime(filetime),
+                attributes: 32,
+                extension: ".txt",
+                typeName: "Text Document"
+            );
+
+            Assert.Equal(@"C:\docs\report.txt", ColumnByHeader("Filename")!.Value.Value(result));
+            Assert.Equal(@"C:\docs", ColumnByHeader("Path")!.Value.Value(result));
+            Assert.Equal("report.txt", ColumnByHeader("Name")!.Value.Value(result));
+            Assert.Equal(".txt", ColumnByHeader("Extension")!.Value.Value(result));
+            Assert.Equal("12345", ColumnByHeader("Size")!.Value.Value(result));
+
+            var expectedLocal = DateTime
+                .FromFileTime(filetime)
+                .ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+            Assert.Equal(expectedLocal, ColumnByHeader("Date Modified")!.Value.Value(result));
+            Assert.Equal(expectedLocal, ColumnByHeader("Date Created")!.Value.Value(result));
+
+            Assert.Equal("32", ColumnByHeader("Attributes")!.Value.Value(result));
+            Assert.Equal("Text Document", ColumnByHeader("Type")!.Value.Value(result));
+        }
+
+        [Fact]
+        public void ExportColumns_UnknownValuesAreEmptyNeverZero()
+        {
+            var result = Result(@"C:\sub\file.bin", size: -1, dateModified: 0);
+
+            Assert.Null(ColumnByHeader("Size")!.Value.Value(result));
+            Assert.Null(ColumnByHeader("Date Modified")!.Value.Value(result));
+            Assert.Null(ColumnByHeader("Date Created")!.Value.Value(result));
+            Assert.Null(ColumnByHeader("Attributes")!.Value.Value(result));
+            Assert.Null(ColumnByHeader("Extension")!.Value.Value(result));
+            Assert.Null(ColumnByHeader("Type")!.Value.Value(result));
+        }
+
+        [Fact]
+        public void ExportColumns_AvailableColumnsHasFixedDisplayOrder()
+        {
+            Assert.Equal(
+                new[]
+                {
+                    "Filename",
+                    "Path",
+                    "Name",
+                    "Extension",
+                    "Size",
+                    "Date Modified",
+                    "Date Created",
+                    "Attributes",
+                    "Type",
+                },
+                ResultExporter.AvailableColumns.Select(c => c.Header)
+            );
+        }
+
+        [Fact]
+        public void WriteCsv_CustomColumnSubsetWritesHeadersOrderAndQuoting()
+        {
+            var columns = new[] { ResultExporter.NameColumn, ResultExporter.PathColumn, ResultExporter.SizeColumn };
+            var output = Write(w =>
+                ResultExporter.WriteCsv(
+                    w,
+                    new[]
+                    {
+                        Result(@"C:\dir with, comma\name""quote.txt", size: 7),
+                        Result(@"C:\plain\a.txt", size: -1),
+                    },
+                    columns
+                )
+            );
+
+            var lines = output.Split('\n');
+            Assert.Equal("Name,Path,Size", lines[0]);
+            Assert.Equal("\"name\"\"quote.txt\",\"C:\\dir with, comma\",7", lines[1]);
+            Assert.Equal("a.txt,C:\\plain,", lines[2]);
+        }
+
+        [Fact]
+        public void WriteCsv_DefaultOverloadMatchesDefaultColumnsOverload()
+        {
+            var results = new[]
+            {
+                Result(@"C:\simple\file.txt", size: 12345, attributes: 32),
+                Result(@"C:\dir with, comma\name""quote.txt"),
+            };
+
+            var output = Write(w => ResultExporter.WriteCsv(w, results));
+            var outputWithColumns = Write(w => ResultExporter.WriteCsv(w, results, ResultExporter.DefaultCsvColumns));
+
+            Assert.Equal(output, outputWithColumns);
+            Assert.Equal(ResultExporter.CsvHeader, output.Split('\n')[0]);
+        }
+
+        [Fact]
+        public void CsvHeaderFor_EscapesAndJoinsInGivenOrder()
+        {
+            var columns = new[] { ResultExporter.NameColumn, ResultExporter.TypeColumn };
+            Assert.Equal("Name,Type", ResultExporter.CsvHeaderFor(columns));
         }
     }
 
