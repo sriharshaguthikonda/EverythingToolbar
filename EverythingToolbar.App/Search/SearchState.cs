@@ -32,6 +32,16 @@ namespace EverythingToolbar.App.Search
         private bool _useSettingsSortKey;
         private bool _useSettingsSortDirection;
 
+        /// <summary>Everything 1.5 caps multi-sort at a primary plus two additional sorts.</summary>
+        public const int MaxSecondarySorts = 2;
+
+        // Session-only secondary/tertiary sorts (applied after the primary sort). Deliberately
+        // NOT persisted to settings (settings ini is schema v1: a single primary sort); they live
+        // only in tab snapshots for the current session.
+        private List<(SortBy SortBy, bool Descending)>? _secondarySorts;
+
+        public IReadOnlyList<(SortBy SortBy, bool Descending)>? SecondarySorts => _secondarySorts;
+
         private Filter _currentFilter;
         public Filter Filter
         {
@@ -133,6 +143,39 @@ namespace EverythingToolbar.App.Search
             OnPropertyChanged(nameof(EffectiveIsSortDescending));
         }
 
+        /// <summary>
+        /// Sets one secondary/tertiary sort slot (0 = secondary, 1 = tertiary). Slots beyond
+        /// <see cref="MaxSecondarySorts"/> are ignored. Raises <see cref="SecondarySorts"/> so the
+        /// search session rebuilds. Session-only; not persisted to settings.
+        /// </summary>
+        public void SetSecondarySort(int slot, SortBy sortBy, bool descending)
+        {
+            if (slot < 0 || slot >= MaxSecondarySorts)
+                return;
+
+            // Replace (never mutate) the list so unchanged queries stay record-equal across
+            // rebuilds — the pipe client keys its result-set reuse on query equality.
+            var updated = _secondarySorts is null
+                ? new List<(SortBy SortBy, bool Descending)>(MaxSecondarySorts)
+                : new List<(SortBy SortBy, bool Descending)>(_secondarySorts);
+            while (updated.Count <= slot)
+                updated.Add(default);
+
+            updated[slot] = (sortBy, descending);
+            _secondarySorts = updated;
+            OnPropertyChanged(nameof(SecondarySorts));
+        }
+
+        /// <summary>Removes all secondary/tertiary sorts (session-only state).</summary>
+        public void ClearSecondarySorts()
+        {
+            if (_secondarySorts is null)
+                return;
+
+            _secondarySorts = null;
+            OnPropertyChanged(nameof(SecondarySorts));
+        }
+
         private string ApplyMacros(string searchTerm)
         {
             var result = searchTerm;
@@ -220,7 +263,11 @@ namespace EverythingToolbar.App.Search
                 IsMatchPath,
                 IsMatchWholeWord,
                 IsRegExEnabled,
-                IsHideResultOmissions
+                IsHideResultOmissions,
+                // Passed by reference on purpose: the list is treated as immutable and replaced
+                // (not mutated) on change, so record equality still lets the pipe client reuse
+                // result sets for unchanged queries.
+                SecondarySorts: _secondarySorts
             );
         }
 
@@ -242,6 +289,11 @@ namespace EverythingToolbar.App.Search
             tab.Filter = Filter;
             tab.SortBy = EffectiveSortBy;
             tab.IsSortDescending = EffectiveIsSortDescending;
+            // Secondary sorts are session-only; carried through the snapshot (copied so the tab
+            // owns its list) but never persisted to settings.
+            tab.SecondarySorts = _secondarySorts is null
+                ? null
+                : new List<(SortBy SortBy, bool Descending)>(_secondarySorts);
             tab.IsMatchCase = IsMatchCase;
             tab.IsMatchPath = IsMatchPath;
             tab.IsMatchWholeWord = IsMatchWholeWord;
@@ -268,6 +320,16 @@ namespace EverythingToolbar.App.Search
                 Filter = tab.Filter;
 
             SetSort(tab.SortBy, tab.IsSortDescending);
+
+            if (tab.SecondarySorts is { Count: > 0 } secondarySorts)
+            {
+                _secondarySorts = new List<(SortBy SortBy, bool Descending)>(secondarySorts);
+                OnPropertyChanged(nameof(SecondarySorts));
+            }
+            else
+            {
+                ClearSecondarySorts();
+            }
 
             _settings.IsMatchCase = tab.IsMatchCase;
             _settings.IsMatchPath = tab.IsMatchPath;

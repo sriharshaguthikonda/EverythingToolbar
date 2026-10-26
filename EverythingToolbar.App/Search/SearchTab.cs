@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
 using EverythingToolbar.Core.Data;
 
@@ -26,6 +27,12 @@ namespace EverythingToolbar.App.Search
         public SortBy SortBy { get; set; }
 
         public bool IsSortDescending { get; set; }
+
+        /// <summary>
+        /// Session-only secondary/tertiary sorts captured from SearchState (max 2, applied after
+        /// the primary sort). Never persisted to settings; carried across tab switches only.
+        /// </summary>
+        public List<(SortBy SortBy, bool Descending)>? SecondarySorts { get; set; }
 
         public bool IsMatchCase { get; set; }
 
@@ -56,6 +63,9 @@ namespace EverythingToolbar.App.Search
             target.Filter = Filter;
             target.SortBy = SortBy;
             target.IsSortDescending = IsSortDescending;
+            target.SecondarySorts = SecondarySorts is null
+                ? null
+                : new List<(SortBy SortBy, bool Descending)>(SecondarySorts);
             target.IsMatchCase = IsMatchCase;
             target.IsMatchPath = IsMatchPath;
             target.IsMatchWholeWord = IsMatchWholeWord;

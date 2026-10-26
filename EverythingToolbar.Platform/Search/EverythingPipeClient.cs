@@ -15,6 +15,9 @@ namespace EverythingToolbar.Platform.Search
 
         private const int PathBufferLength = 4096;
 
+        // Everything supports a primary plus two additional sorts; anything beyond is truncated.
+        private const int MaxSecondarySorts = 2;
+
         private const string AlphaInstanceName = "1.5a";
 
         // How long a query waits for the gate before rechecking whether it has been superseded.
@@ -284,6 +287,18 @@ namespace EverythingToolbar.Platform.Search
                 Everything3_SetSearchRegex(searchState, query.UseRegex);
                 Everything3_SetSearchHideResultOmissions(searchState, query.HideResultOmissions);
                 Everything3_AddSearchSort(searchState, ToPropertyId(query.SortBy), !query.SortDescending);
+                // Everything 1.5 supports up to three sorts (primary + secondary + tertiary);
+                // the SDK3 API applies them in AddSearchSort call order. Truncate beyond two
+                // secondary sorts rather than sending an unsupported deeper sort chain.
+                if (query.SecondarySorts is { Count: > 0 } secondarySorts)
+                {
+                    var secondaryCount = Math.Min(secondarySorts.Count, MaxSecondarySorts);
+                    for (var i = 0; i < secondaryCount; i++)
+                    {
+                        var (sortBy, descending) = secondarySorts[i];
+                        Everything3_AddSearchSort(searchState, ToPropertyId(sortBy), !descending);
+                    }
+                }
                 Everything3_AddSearchPropertyRequest(searchState, PropertyIdPathAndName);
                 Everything3_AddSearchPropertyRequestHighlighted(searchState, PropertyIdName);
                 Everything3_AddSearchPropertyRequestHighlighted(searchState, PropertyIdPath);

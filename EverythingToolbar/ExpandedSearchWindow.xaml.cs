@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -285,6 +286,64 @@ namespace EverythingToolbar
                     Tag = true,
                 }
             );
+
+            // Everything 1.5 multi-sort: secondary and tertiary sorts are applied after the
+            // primary. The state is session-only; the header glyph and header-click cycling
+            // remain primary-only.
+            var secondarySorts = _searchState.SecondarySorts;
+            AddSecondarySortSection("Secondary Sort", 0, secondarySorts);
+            AddSecondarySortSection("Tertiary Sort", 1, secondarySorts);
+
+            SortByMenu.Items.Add(new Separator());
+            var clearItem = new MenuItem { Header = "Clear Additional Sorts" };
+            clearItem.Click += OnClearSecondarySortsClick;
+            SortByMenu.Items.Add(clearItem);
+        }
+
+        private void AddSecondarySortSection(
+            string header,
+            int slot,
+            IReadOnlyList<(SortBy SortBy, bool Descending)>? secondarySorts
+        )
+        {
+            SortByMenu.Items.Add(new MenuItem { Header = header, IsEnabled = false });
+
+            var hasSlot = secondarySorts is not null && slot < secondarySorts.Count;
+            var currentSortBy = hasSlot ? secondarySorts[slot].SortBy : (SortBy?)null;
+            var currentDescending = hasSlot && secondarySorts[slot].Descending;
+
+            foreach (var (sortBy, displayName) in SortMenuItems.Items)
+            {
+                var item = new MenuItem
+                {
+                    Header = displayName,
+                    IsCheckable = true,
+                    IsChecked = sortBy == currentSortBy,
+                };
+                item.Click += (_, _) => _searchState.SetSecondarySort(slot, sortBy, currentDescending);
+                SortByMenu.Items.Add(item);
+            }
+
+            SortByMenu.Items.Add(new Separator());
+            var directionItems = new[] { (Descending: false, Label: "Ascending"), (true, "Descending") };
+            foreach (var (descending, label) in directionItems)
+            {
+                var item = new MenuItem
+                {
+                    Header = label,
+                    IsCheckable = true,
+                    IsChecked = hasSlot && currentDescending == descending,
+                };
+                item.Click += (_, _) =>
+                    _searchState.SetSecondarySort(slot, currentSortBy ?? _searchState.EffectiveSortBy, descending);
+                SortByMenu.Items.Add(item);
+            }
+            SortByMenu.Items.Add(new Separator());
+        }
+
+        private void OnClearSecondarySortsClick(object sender, RoutedEventArgs e)
+        {
+            _searchState.ClearSecondarySorts();
         }
 
         private void OnSortByItemClick(object sender, RoutedEventArgs e)

@@ -22,11 +22,15 @@ namespace EverythingToolbar.FuzzySearch.Tests.Support
         public int CorpusCountQueries { get; private set; }
         public int CorpusRangeQueries { get; private set; }
 
+        /// <summary>Last query passed to a count/range call (for asserting query composition).</summary>
+        public SearchQuery? LastQuery { get; private set; }
+
         public Task<int> QueryCountAsync(SearchQuery query, int pageSize, CancellationToken cancellationToken) =>
             Task.FromResult(QueryCountSync(query, pageSize, cancellationToken));
 
         public int QueryCountSync(SearchQuery query, int pageSize, CancellationToken cancellationToken)
         {
+            LastQuery = query;
             if (PathCorpus is null)
                 return CountToReturn;
 
