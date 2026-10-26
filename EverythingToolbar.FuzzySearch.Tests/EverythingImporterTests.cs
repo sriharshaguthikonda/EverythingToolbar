@@ -199,7 +199,7 @@ namespace EverythingToolbar.FuzzySearch.Tests
             Assert.Empty(result.Sessions);
 
             // A non-array root is rejected too.
-            parsed = EverythingImporter.TryParseSessions("""{ "tabs": [] }""", null, out result, out error);
+            parsed = EverythingImporter.TryParseSessions("""{ "tabs": [] }""", null, out result, out _);
             Assert.False(parsed);
             Assert.Empty(result.Sessions);
         }
