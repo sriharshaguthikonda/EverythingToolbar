@@ -167,9 +167,11 @@
         Header="Tools"
         SubmenuOpened="OnToolsSubmenuOpened">
         <MenuItem Click="OnEverythingClick" Header="Everything" />
-        <!-- Two rename entry points by design: "Batch Rename…" uses the in-app
-             BatchRenameEngine + shell IFileOperation (works without Everything running);
-             "Advanced Rename…" delegates to Everything's native -rename dialog. -->
+        <!--
+          Two rename entry points by design: "Batch Rename…" uses the in-app
+          BatchRenameEngine + shell IFileOperation (works without Everything running);
+          "Advanced Rename…" delegates to Everything's native -rename dialog.
+        -->
         <MenuItem
           x:Name="ToolsBatchRenameMenuItem"
           Click="OnBatchRenameClick"
