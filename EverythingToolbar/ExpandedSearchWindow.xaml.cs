@@ -58,16 +58,19 @@ namespace EverythingToolbar
             // Same pattern for bookmarks.json (no-op on later windows).
             _bookmarkStore.Load();
             RebuildBookmarksMenu();
+            _bookmarkStore.Bookmarks.CollectionChanged += OnBookmarksCollectionChanged;
 
             // And sessions.json.
             _sessionStore.Load();
 
             ApplyFolderSidebarVisibility(_settings.IsFolderSidebarEnabled);
+            ApplyBookmarkBarVisibility();
             ApplyViewMenuChecks();
         }
 
         private void OnWindowClosed(object? sender, EventArgs e)
         {
+            _bookmarkStore.Bookmarks.CollectionChanged -= OnBookmarksCollectionChanged;
             _tabManager.Save();
         }
 
@@ -519,6 +522,80 @@ namespace EverythingToolbar
             FolderSidebar.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
             SidebarColumn.Width = visible ? new GridLength(240) : new GridLength(0);
             FolderSidebarMenuItem.IsChecked = visible;
+        }
+
+        private void OnToggleBookmarkBarClick(object sender, RoutedEventArgs e)
+        {
+            _settings.IsBookmarkBarEnabled = !_settings.IsBookmarkBarEnabled;
+            ApplyBookmarkBarVisibility();
+        }
+
+        private void ApplyBookmarkBarVisibility()
+        {
+            // The bar is only shown when enabled AND non-empty (an empty bar would be dead
+            // chrome); the pure rule lives in BookmarkBarInfo.IsBarVisible for unit testing.
+            BookmarkBar.Visibility = App.Search.BookmarkBarInfo.IsBarVisible(
+                _settings.IsBookmarkBarEnabled,
+                _bookmarkStore.Bookmarks.Count
+            )
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+            BookmarkBarMenuItem.IsChecked = _settings.IsBookmarkBarEnabled;
+        }
+
+        private void OnBookmarksCollectionChanged(
+            object? sender,
+            System.Collections.Specialized.NotifyCollectionChangedEventArgs e
+        )
+        {
+            // The bar binds directly to the store's ObservableCollection, so item changes refresh
+            // it automatically; only the empty/non-empty collapse needs a manual pass.
+            ApplyBookmarkBarVisibility();
+        }
+
+        private void OnBookmarkBarButtonClick(object sender, RoutedEventArgs e)
+        {
+            // Same run path as the Bookmarks menu items (shared RunBookmark below).
+            if (sender is FrameworkElement { DataContext: App.Search.SearchBookmark bookmark })
+                RunBookmark(bookmark);
+        }
+
+        private void OnBookmarkBarButtonToolTipOpening(object sender, ToolTipEventArgs e)
+        {
+            // Computed lazily on open via the pure helper (query text + filter).
+            if (sender is FrameworkElement { DataContext: App.Search.SearchBookmark bookmark })
+            {
+                var element = (FrameworkElement)sender;
+                element.ToolTip = App.Search.BookmarkBarInfo.BuildTooltip(bookmark);
+            }
+        }
+
+        private void OnBookmarkBarRemoveClick(object sender, RoutedEventArgs e)
+        {
+            // ContextMenu items inherit the placement target's DataContext, which is the bookmark.
+            if (sender is FrameworkElement { DataContext: App.Search.SearchBookmark bookmark })
+                _bookmarkStore.Remove(bookmark.Name);
+        }
+
+        private void OnBookmarkBarRenameClick(object sender, RoutedEventArgs e)
+        {
+            if (sender is not FrameworkElement { DataContext: App.Search.SearchBookmark bookmark })
+                return;
+
+            var dialog = new App.BookmarkNameDialog(bookmark.Name) { Owner = Window.GetWindow(this) };
+            if (dialog.ShowDialog() != true)
+                return;
+
+            // Add replaces by name; a genuine rename (new name differs) also removes the old
+            // entry so the bookmark is moved rather than duplicated.
+            _bookmarkStore.Remove(bookmark.Name);
+            _bookmarkStore.Add(
+                dialog.BookmarkName,
+                bookmark.SearchTerm,
+                bookmark.FilterName,
+                bookmark.SortBy,
+                bookmark.IsSortDescending
+            );
         }
 
         private void OnToggleMatchCaseClick(object sender, RoutedEventArgs e)

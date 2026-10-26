@@ -191,6 +191,9 @@ namespace EverythingToolbar.App
         [Option(DefaultValue = false)]
         bool IsFolderSidebarEnabled { get; set; }
 
+        [Option(DefaultValue = false)]
+        bool IsBookmarkBarEnabled { get; set; }
+
         [Option(DefaultValue = true)]
         bool IsPathColumnVisible { get; set; }
 

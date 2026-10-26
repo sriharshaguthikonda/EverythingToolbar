@@ -32,6 +32,7 @@
       <RowDefinition Height="Auto" />
       <RowDefinition Height="Auto" />
       <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
       <RowDefinition Height="*" />
       <RowDefinition Height="Auto" />
     </Grid.RowDefinitions>
@@ -124,6 +125,11 @@
           Click="OnToggleFolderSidebarClick"
           Header="Toggle Folder Sidebar"
           InputGestureText="Ctrl+B"
+          IsCheckable="True" />
+        <MenuItem
+          x:Name="BookmarkBarMenuItem"
+          Click="OnToggleBookmarkBarClick"
+          Header="Bookmark Bar"
           IsCheckable="True" />
         <MenuItem
           Click="OnTogglePreviewClick"
@@ -300,7 +306,62 @@
       </ItemsControl>
     </Border>
 
-    <Grid Grid.Row="2" Margin="8 8 8 0">
+    <!--
+      Bookmark bar (Everything-1.5 parity): a quick-access row of buttons, one per bookmark in
+      the store's alphabetical order, bound live to SearchBookmarkStore.Bookmarks. Overflow wraps
+      into additional lines (bookmark counts are small; no virtualization needed). The row hides
+      itself when the setting is off OR no bookmarks exist (BookmarkBarInfo.IsBarVisible).
+    -->
+    <Border
+      x:Name="BookmarkBar"
+      Grid.Row="2"
+      Margin="8 4 8 0"
+      Padding="6 4 2 2"
+      Background="{DynamicResource SearchWindowBackground}"
+      BorderBrush="{DynamicResource TabBarBottomBorder}"
+      BorderThickness="0 0 0 1"
+      Visibility="Collapsed">
+      <ItemsControl x:Name="BookmarkBarItems" ItemsSource="{Binding Source={markup:Service {x:Type appsearch:SearchBookmarkStore}}, Path=Bookmarks}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <WrapPanel Orientation="Horizontal" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <Button
+              Click="OnBookmarkBarButtonClick"
+              Content="{Binding Name}"
+              ToolTipOpening="OnBookmarkBarButtonToolTipOpening">
+              <Button.ContextMenu>
+                <ContextMenu>
+                  <MenuItem Click="OnBookmarkBarRemoveClick" Header="Remove Bookmark" />
+                  <MenuItem Click="OnBookmarkBarRenameClick" Header="Rename Bookmark…" />
+                </ContextMenu>
+              </Button.ContextMenu>
+              <Button.Style>
+                <Style TargetType="Button">
+                  <Setter Property="Background" Value="Transparent" />
+                  <Setter Property="BorderThickness" Value="0" />
+                  <Setter Property="Foreground" Value="{DynamicResource SearchResultFileName}" />
+                  <Setter Property="Margin" Value="0 0 4 2" />
+                  <Setter Property="Padding" Value="8 3 8 3" />
+                  <Setter Property="Cursor" Value="Hand" />
+                  <Setter Property="HorizontalContentAlignment" Value="Left" />
+                  <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                      <Setter Property="Background" Value="{DynamicResource TabBarButtonBackgroundHover}" />
+                    </Trigger>
+                  </Style.Triggers>
+                </Style>
+              </Button.Style>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </Border>
+
+    <Grid Grid.Row="3" Margin="8 8 8 0">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="*" />
         <ColumnDefinition Width="Auto" />
@@ -319,7 +380,7 @@
         SelectedFilter="{Binding Source={markup:Service {x:Type appsearch:SearchState}}, Path=Filter, Mode=TwoWay}" />
     </Grid>
 
-    <Grid Grid.Row="3" Margin="8 8 8 0">
+    <Grid Grid.Row="4" Margin="8 8 8 0">
       <Grid.ColumnDefinitions>
         <ColumnDefinition x:Name="SidebarColumn" Width="240" />
         <ColumnDefinition Width="*" />
@@ -340,7 +401,7 @@
 
     <Border
       x:Name="StatusBar"
-      Grid.Row="4"
+      Grid.Row="5"
       Padding="8 4 8 4"
       Background="{DynamicResource SearchWindowBackground}"
       BorderBrush="{DynamicResource TabBarBottomBorder}"
