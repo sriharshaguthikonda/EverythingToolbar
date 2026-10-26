@@ -17,4 +17,11 @@
     <Using Include="EverythingToolbar.App.Services" />
     <Using Include="EverythingToolbar.Core.Services" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Lets the test project use the internal SearchHistory test seams (injectable history
+         path, Import, GetHistorySnapshot); builds that sign this assembly must also pass
+         SignAssembly=false for the friend to resolve (the standard local/CI build does). -->
+    <InternalsVisibleTo Include="EverythingToolbar.FuzzySearch.Tests" />
+    <InternalsVisibleTo Include="EverythingToolbar" />
+  </ItemGroup>
 </Project>

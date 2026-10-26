@@ -65,6 +65,11 @@
           <MenuItem Header="(no sessions)" IsEnabled="False" />
         </MenuItem>
         <Separator />
+        <MenuItem Header="Import">
+          <MenuItem Click="OnImportEverythingSessionClick" Header="Everything Session…" />
+          <MenuItem Click="OnImportEverythingHistoryClick" Header="Everything Search History…" />
+        </MenuItem>
+        <Separator />
         <MenuItem
           x:Name="ExportMenuItem"
           Click="OnExportClick"

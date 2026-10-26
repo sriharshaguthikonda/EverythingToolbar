@@ -33,6 +33,8 @@ namespace EverythingToolbar
         private readonly App.Search.SearchSessionStore _sessionStore =
             Ioc.Default.GetRequiredService<App.Search.SearchSessionStore>();
         private readonly App.Search.SearchState _searchState = Ioc.Default.GetRequiredService<App.Search.SearchState>();
+        private readonly App.Services.SearchHistory _searchHistory =
+            Ioc.Default.GetRequiredService<App.Services.SearchHistory>();
         private readonly EditOperationsController _editOperations =
             Ioc.Default.GetRequiredService<EditOperationsController>();
         private readonly App.Services.FilterProvider _filterProvider =
@@ -804,6 +806,101 @@ namespace EverythingToolbar
         private void OnExportClick(object sender, RoutedEventArgs e)
         {
             ExportResults();
+        }
+
+        private void OnImportEverythingSessionClick(object sender, RoutedEventArgs e)
+        {
+            ImportEverythingSession();
+        }
+
+        private void OnImportEverythingHistoryClick(object sender, RoutedEventArgs e)
+        {
+            ImportEverythingHistory();
+        }
+
+        private string? PickImportFile(string title, string filter)
+        {
+            // Everything keeps its own data in %APPDATA%\Everything; fall back to Documents.
+            var everythingDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "Everything"
+            );
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = title,
+                Filter = filter,
+                InitialDirectory = Directory.Exists(everythingDir)
+                    ? everythingDir
+                    : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            };
+
+            return dialog.ShowDialog(this) == true ? dialog.FileName : null;
+        }
+
+        private void ImportEverythingSession()
+        {
+            var path = PickImportFile(
+                "Import Everything Session",
+                "Everything Session JSON (*.json)|*.json|All files (*.*)|*.*"
+            );
+            if (path is null)
+                return;
+
+            try
+            {
+                if (
+                    !App.Search.EverythingImporter.TryParseSessions(
+                        File.ReadAllText(path),
+                        _filterProvider,
+                        out var import,
+                        out var error
+                    )
+                )
+                {
+                    Logger.Error("Everything session import from {0} failed: {1}", path, error);
+                    SetExportStatus("Import failed");
+                    ScheduleExportStatusClear();
+                    return;
+                }
+
+                foreach (var imported in import.Sessions)
+                    _sessionStore.Save(imported.Snapshot.Name, imported.Snapshot);
+
+                SetExportStatus(
+                    $"Imported {import.Sessions.Sum(s => s.TabCount)} tabs from {import.Sessions.Count} windows"
+                );
+                ScheduleExportStatusClear();
+            }
+            catch (Exception exception)
+            {
+                Logger.Error(exception, "Failed to import Everything session from {0}.", path);
+                SetExportStatus("Import failed");
+                ScheduleExportStatusClear();
+            }
+        }
+
+        private void ImportEverythingHistory()
+        {
+            var path = PickImportFile(
+                "Import Everything Search History",
+                "CSV files (*.csv)|*.csv|All files (*.*)|*.*"
+            );
+            if (path is null)
+                return;
+
+            try
+            {
+                var searches = App.Search.EverythingImporter.ParseSearchHistory(File.ReadAllText(path));
+                var imported = _searchHistory.Import(searches);
+                SetExportStatus($"Imported {imported} searches");
+                ScheduleExportStatusClear();
+            }
+            catch (Exception exception)
+            {
+                Logger.Error(exception, "Failed to import Everything search history from {0}.", path);
+                SetExportStatus("Import failed");
+                ScheduleExportStatusClear();
+            }
         }
 
         private async void ExportResults()
