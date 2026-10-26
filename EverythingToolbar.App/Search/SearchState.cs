@@ -108,6 +108,31 @@ namespace EverythingToolbar.App.Search
 
         public void UseSettingsSortDirection() => _useSettingsSortDirection = true;
 
+        /// <summary>
+        /// Applies an explicit sort (e.g. from a results column header click) that overrides the
+        /// filter defaults. Raises change notifications so the search session rebuilds.
+        /// </summary>
+        public void SetSort(SortBy sortBy, bool descending)
+        {
+            UseSettingsSortKey();
+            UseSettingsSortDirection();
+            _settings.SortBy = (int)sortBy;
+            _settings.IsSortDescending = descending;
+            OnPropertyChanged(nameof(SortBy));
+            OnPropertyChanged(nameof(IsSortDescending));
+            OnPropertyChanged(nameof(EffectiveSortBy));
+            OnPropertyChanged(nameof(EffectiveIsSortDescending));
+        }
+
+        /// <summary>Clears the explicit sort override and falls back to the filter/settings defaults.</summary>
+        public void ResetSort()
+        {
+            _useSettingsSortKey = false;
+            _useSettingsSortDirection = false;
+            OnPropertyChanged(nameof(EffectiveSortBy));
+            OnPropertyChanged(nameof(EffectiveIsSortDescending));
+        }
+
         private string ApplyMacros(string searchTerm)
         {
             var result = searchTerm;
@@ -197,6 +222,77 @@ namespace EverythingToolbar.App.Search
                 IsRegExEnabled,
                 IsHideResultOmissions
             );
+        }
+
+        /// <summary>
+        /// Captures the full user-mutable search state (query, filter reference, effective sort,
+        /// match flags) into a tab snapshot for browser-style tabs.
+        /// </summary>
+        public SearchTab CaptureSnapshot()
+        {
+            var tab = new SearchTab();
+            CaptureSnapshotInto(tab);
+            return tab;
+        }
+
+        /// <summary>Same as <see cref="CaptureSnapshot"/> but reuses an existing snapshot instance.</summary>
+        public void CaptureSnapshotInto(SearchTab tab)
+        {
+            tab.SearchTerm = SearchTerm;
+            tab.Filter = Filter;
+            tab.SortBy = EffectiveSortBy;
+            tab.IsSortDescending = EffectiveIsSortDescending;
+            tab.IsMatchCase = IsMatchCase;
+            tab.IsMatchPath = IsMatchPath;
+            tab.IsMatchWholeWord = IsMatchWholeWord;
+            tab.IsMatchDiacritics = IsMatchDiacritics;
+            tab.IsMatchPrefix = IsMatchPrefix;
+            tab.IsMatchSuffix = IsMatchSuffix;
+            tab.IsIgnorePunctuation = IsIgnorePunctuation;
+            tab.IsIgnoreWhitespace = IsIgnoreWhitespace;
+            tab.IsRegExEnabled = IsRegExEnabled;
+            tab.IsHideResultOmissions = IsHideResultOmissions;
+        }
+
+        /// <summary>
+        /// Restores a tab snapshot: sets the query and filter, forces the captured effective sort
+        /// as an explicit override, and writes the captured match flags back to settings. Raises
+        /// the same property change notifications the search session listens to (an explicit pass
+        /// at the end guarantees a rebuild even when individual values were unchanged).
+        /// </summary>
+        public void RestoreSnapshot(SearchTab tab)
+        {
+            SearchTerm = tab.SearchTerm ?? "";
+
+            if (tab.Filter is not null)
+                Filter = tab.Filter;
+
+            SetSort(tab.SortBy, tab.IsSortDescending);
+
+            _settings.IsMatchCase = tab.IsMatchCase;
+            _settings.IsMatchPath = tab.IsMatchPath;
+            _settings.IsMatchWholeWord = tab.IsMatchWholeWord;
+            _settings.IsMatchDiacritics = tab.IsMatchDiacritics;
+            _settings.IsMatchPrefix = tab.IsMatchPrefix;
+            _settings.IsMatchSuffix = tab.IsMatchSuffix;
+            _settings.IsIgnorePunctuation = tab.IsIgnorePunctuation;
+            _settings.IsIgnoreWhitespace = tab.IsIgnoreWhitespace;
+            _settings.IsRegExEnabled = tab.IsRegExEnabled;
+            _settings.IsHideResultOmissions = tab.IsHideResultOmissions;
+
+            // The settings writes above normally flow back via OnSettingsChanged, but only when a
+            // value actually changes; raise explicitly so the session always rebuilds on switch.
+            OnPropertyChanged(nameof(SearchTerm));
+            OnPropertyChanged(nameof(IsMatchCase));
+            OnPropertyChanged(nameof(IsMatchPath));
+            OnPropertyChanged(nameof(IsMatchWholeWord));
+            OnPropertyChanged(nameof(IsMatchDiacritics));
+            OnPropertyChanged(nameof(IsMatchPrefix));
+            OnPropertyChanged(nameof(IsMatchSuffix));
+            OnPropertyChanged(nameof(IsIgnorePunctuation));
+            OnPropertyChanged(nameof(IsIgnoreWhitespace));
+            OnPropertyChanged(nameof(IsRegExEnabled));
+            OnPropertyChanged(nameof(IsHideResultOmissions));
         }
 
         private void OnSettingsChanged(object? sender, PropertyChangedEventArgs e)

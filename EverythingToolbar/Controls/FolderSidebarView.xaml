@@ -1,0 +1,38 @@
+﻿<UserControl
+  x:Class="EverythingToolbar.Controls.FolderSidebarView"
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  d:DesignHeight="450"
+  d:DesignWidth="240"
+  mc:Ignorable="d">
+  <!--
+    Folder sidebar v1: no icons, English-only strings, folders only (one parent:"..." folder:
+    query per expansion, lazy). Selection navigates the main results via SearchState.SearchTerm.
+  -->
+  <TreeView
+    x:Name="FolderTree"
+    Background="Transparent"
+    BorderThickness="0"
+    Foreground="{DynamicResource SearchResultFileName}"
+    SelectedItemChanged="OnSelectedItemChanged"
+    VirtualizingPanel.IsVirtualizing="True"
+    VirtualizingPanel.VirtualizationMode="Recycling">
+    <TreeView.ItemContainerStyle>
+      <Style TargetType="TreeViewItem">
+        <Setter Property="Foreground" Value="{DynamicResource SearchResultFileName}" />
+        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=OneWayToSource}" />
+      </Style>
+    </TreeView.ItemContainerStyle>
+    <TreeView.ItemTemplate>
+      <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+        <TextBlock
+          Margin="2 0 2 0"
+          Text="{Binding Name}"
+          TextTrimming="CharacterEllipsis"
+          ToolTip="{Binding FullPath}" />
+      </HierarchicalDataTemplate>
+    </TreeView.ItemTemplate>
+  </TreeView>
+</UserControl>

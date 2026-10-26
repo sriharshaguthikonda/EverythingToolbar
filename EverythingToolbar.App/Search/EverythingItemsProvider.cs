@@ -13,6 +13,7 @@ namespace EverythingToolbar.App.Search
         private readonly IEverythingClient _client;
         private readonly SearchQuery _query;
         private readonly Action<IList<SearchResult>>? _onResultsMaterialized;
+        private readonly Action<int>? _onCountTimed;
 
         private bool _isBusy;
         public bool IsBusy
@@ -33,22 +34,45 @@ namespace EverythingToolbar.App.Search
         public EverythingItemsProvider(
             IEverythingClient client,
             SearchQuery query,
-            Action<IList<SearchResult>>? onResultsMaterialized = null
+            Action<IList<SearchResult>>? onResultsMaterialized = null,
+            Action<int>? onCountTimed = null
         )
         {
             _client = client;
             _query = query;
             _onResultsMaterialized = onResultsMaterialized;
+            _onCountTimed = onCountTimed;
         }
 
         public Task<int> FetchCount(int pageSize, bool isAsync, CancellationToken cancellationToken)
         {
             // The token cannot interrupt a query already in flight, but it does stop a superseded
-            // one from ever starting.
+            // one from ever starting. The stopwatch covers the whole count fetch (including any
+            // client-side phases) — this is the wall time the user actually waited for.
+            var stopwatch = _onCountTimed is null ? null : System.Diagnostics.Stopwatch.StartNew();
             if (!isAsync)
-                return Task.FromResult(_client.QueryCountSync(_query, pageSize, cancellationToken));
+            {
+                var count = _client.QueryCountSync(_query, pageSize, cancellationToken);
+                ReportCountElapsed(stopwatch);
+                return Task.FromResult(count);
+            }
 
-            return TrackBusyState(_client.QueryCountAsync(_query, pageSize, cancellationToken));
+            return TrackBusyState(
+                TrackCountAsync(_client.QueryCountAsync(_query, pageSize, cancellationToken), stopwatch)
+            );
+        }
+
+        private async Task<int> TrackCountAsync(Task<int> task, System.Diagnostics.Stopwatch? stopwatch)
+        {
+            var count = await task;
+            ReportCountElapsed(stopwatch);
+            return count;
+        }
+
+        private void ReportCountElapsed(System.Diagnostics.Stopwatch? stopwatch)
+        {
+            if (stopwatch != null)
+                _onCountTimed?.Invoke((int)stopwatch.ElapsedMilliseconds);
         }
 
         public async Task<IList<SearchResult>> FetchRange(

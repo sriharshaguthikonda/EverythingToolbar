@@ -31,6 +31,7 @@ namespace EverythingToolbar
             router.SetInstanceName(settings.InstanceName);
             router.SetForceLegacySdk(settings.IsForceLegacySdk);
             provider.GetRequiredService<VocabularyRefresher>().Start();
+            provider.GetRequiredService<ResumeRecoveryService>().Start();
         }
     }
 
@@ -87,11 +88,21 @@ namespace EverythingToolbar
                 .AddSingleton<EverythingFilterProvider>()
                 .AddSingleton<FilterProvider>()
                 .AddSingleton<SearchState>()
+                .AddSingleton<SearchTabManager>(sp => new SearchTabManager(
+                    sp.GetRequiredService<SearchState>(),
+                    sp.GetRequiredService<FilterProvider>()
+                ))
+                .AddSingleton<SearchBookmarkStore>()
+                .AddSingleton<SearchSessionStore>(sp => new SearchSessionStore(
+                    Path.Combine(ConfigPaths.GetConfigDirectory(), "sessions.json"),
+                    sp.GetRequiredService<FilterProvider>()
+                ))
                 .AddSingleton<SearchSession>()
                 .AddSingleton<SearchCommands>()
                 .AddSingleton<CustomActionService>()
                 .AddSingleton<SearchResultActions>()
-                .AddSingleton<EverythingSearchLauncher>();
+                .AddSingleton<EverythingSearchLauncher>()
+                .AddSingleton<EverythingToolbar.App.Search.ResultsExportService>();
         }
 
         // Windowing, theming, OS policy, and the global input hooks that drive the search window.
@@ -100,12 +111,17 @@ namespace EverythingToolbar
             return services
                 .AddSingleton<WindowsPolicy>()
                 .AddSingleton<ThemeService>()
+                .AddSingleton<EverythingToolbar.Platform.Shell.ShellContextMenuService>()
+                .AddSingleton<EverythingToolbar.Platform.Shell.FileOperationsService>()
+                .AddSingleton<Search.EditOperationsController>()
                 .AddSingleton<StartMenuSearchInterceptor>()
                 .AddSingleton<GlobalShortcutListener>()
                 .AddSingleton<SearchWindow>()
+                .AddSingleton<ExpandedSearchWindow>()
                 .AddSingleton<SearchWindowController>()
                 .AddSingleton<ISearchWindowController>(sp => sp.GetRequiredService<SearchWindowController>())
-                .AddSingleton<SearchHost>();
+                .AddSingleton<SearchHost>()
+                .AddSingleton<ResumeRecoveryService>();
         }
 
         public static IServiceCollection AddViewModels(this IServiceCollection services)

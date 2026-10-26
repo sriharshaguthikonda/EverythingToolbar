@@ -23,8 +23,16 @@
     <behaviors:Themed Surface="AppWindow" />
   </i:Interaction.Behaviors>
 
+  <Window.Resources>
+    <Style x:Key="SettingsSearchResultItemStyle" TargetType="ListBoxItem">
+      <Setter Property="Padding" Value="4" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+  </Window.Resources>
+
   <Grid>
     <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
       <RowDefinition Height="Auto" />
       <RowDefinition Height="*" />
     </Grid.RowDefinitions>
@@ -38,9 +46,60 @@
       </ui:TitleBar.Icon>
     </ui:TitleBar>
 
+    <Grid Grid.Row="1" Margin="40 8 40 4">
+      <ui:TextBox
+        x:Name="SettingsSearchBox"
+        AutomationProperties.HelpText="{x:Static properties:Resources.SettingsSearchSettingsHelp}"
+        AutomationProperties.Name="{x:Static properties:Resources.SettingsSearchSettings}"
+        PlaceholderText="{x:Static properties:Resources.SettingsSearchSettings}"
+        PreviewKeyDown="OnSettingsSearchBoxKeyDown"
+        TextChanged="OnSettingsSearchTextChanged" />
+      <Popup
+        x:Name="SearchResultsPopup"
+        AllowsTransparency="True"
+        Placement="Bottom"
+        PlacementTarget="{Binding ElementName=SettingsSearchBox}"
+        PopupAnimation="Fade"
+        StaysOpen="False">
+        <Border
+          Margin="0 2 0 0"
+          Padding="4"
+          Background="{DynamicResource ApplicationBackgroundBrush}"
+          BorderBrush="{DynamicResource TextFillColorSecondaryBrush}"
+          BorderThickness="1"
+          CornerRadius="8">
+          <ListBox
+            x:Name="SearchResultsList"
+            MinWidth="420"
+            MaxHeight="320"
+            Background="Transparent"
+            BorderThickness="0"
+            ItemContainerStyle="{StaticResource SettingsSearchResultItemStyle}"
+            KeyDown="OnSearchResultKeyDown"
+            PreviewMouseLeftButtonDown="OnSearchResultClick">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <StackPanel MinWidth="380" Margin="6 4">
+                  <TextBlock
+                    AutomationProperties.Name="{Binding Title}"
+                    FontSize="14"
+                    FontWeight="SemiBold"
+                    Text="{Binding Title}" />
+                  <TextBlock
+                    FontSize="12"
+                    Opacity="0.7"
+                    Text="{Binding PageName}" />
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Border>
+      </Popup>
+    </Grid>
+
     <ui:NavigationView
       Name="ThisNavigationView"
-      Grid.Row="1"
+      Grid.Row="2"
       MinHeight="300"
       IsBackButtonVisible="Collapsed"
       IsPaneToggleVisible="True"

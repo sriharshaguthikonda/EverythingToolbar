@@ -10,7 +10,11 @@ namespace EverythingToolbar.Core.Data
         string FullPathAndFileName,
         bool IsFile,
         long FileSize,
-        FILETIME DateModified
+        FILETIME DateModified,
+        string? Extension = null,
+        string? TypeName = null,
+        DateTime? DateCreated = null,
+        uint? Attributes = null
     )
     {
         public string Path => System.IO.Path.GetDirectoryName(FullPathAndFileName) ?? "";

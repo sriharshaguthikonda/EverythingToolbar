@@ -1,0 +1,167 @@
+﻿<Window
+  x:Class="EverythingToolbar.App.BatchRenameDialog"
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:b="clr-namespace:EverythingToolbar.Behaviors"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  Title="Batch Rename"
+  Width="760"
+  Height="560"
+  MinWidth="720"
+  MinHeight="480"
+  d:DesignHeight="560"
+  d:DesignWidth="760"
+  Background="{DynamicResource ApplicationBackgroundBrush}"
+  Foreground="{DynamicResource SearchResultFileName}"
+  ShowInTaskbar="False"
+  UseLayoutRounding="True"
+  WindowStartupLocation="CenterOwner"
+  mc:Ignorable="d">
+  <i:Interaction.Behaviors>
+    <b:Themed Surface="AppWindow" />
+  </i:Interaction.Behaviors>
+
+  <Grid Margin="16">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+
+    <!--  Search row  -->
+    <Grid Grid.Row="0" Margin="0 0 0 8">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="Auto" SharedSizeGroup="Label" />
+        <ColumnDefinition Width="*" />
+      </Grid.ColumnDefinitions>
+      <TextBlock
+        Grid.Column="0"
+        Margin="0 0 8 0"
+        VerticalAlignment="Center"
+        Foreground="{DynamicResource SearchResultFileName}"
+        Text="Search for:" />
+      <TextBox
+        x:Name="SearchBox"
+        Grid.Column="1"
+        Height="28"
+        VerticalContentAlignment="Center"
+        TextChanged="OnInputChanged" />
+    </Grid>
+
+    <!--  Replace row  -->
+    <Grid Grid.Row="1" Margin="0 0 0 8">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="Auto" SharedSizeGroup="Label" />
+        <ColumnDefinition Width="*" />
+      </Grid.ColumnDefinitions>
+      <TextBlock
+        Grid.Column="0"
+        Margin="0 0 8 0"
+        VerticalAlignment="Center"
+        Foreground="{DynamicResource SearchResultFileName}"
+        Text="Replace with:" />
+      <TextBox
+        x:Name="ReplaceBox"
+        Grid.Column="1"
+        Height="28"
+        VerticalContentAlignment="Center"
+        TextChanged="OnInputChanged" />
+    </Grid>
+
+    <!--  Options row  -->
+    <WrapPanel Grid.Row="2" Margin="0 0 0 8">
+      <CheckBox
+        x:Name="UseRegexCheck"
+        Margin="0 0 16 0"
+        Checked="OnInputChanged"
+        Content="Use regex"
+        Unchecked="OnInputChanged" />
+      <CheckBox
+        x:Name="CaseSensitiveCheck"
+        Margin="0 0 16 0"
+        Checked="OnInputChanged"
+        Content="Case sensitive"
+        Unchecked="OnInputChanged" />
+      <CheckBox
+        x:Name="MatchAllCheck"
+        Margin="0 0 16 0"
+        Checked="OnInputChanged"
+        Content="Match all occurrences"
+        Unchecked="OnInputChanged" />
+      <CheckBox
+        x:Name="IncludeExtensionCheck"
+        Margin="0 0 16 0"
+        Checked="OnInputChanged"
+        Content="Include extension"
+        Unchecked="OnInputChanged" />
+      <CheckBox
+        x:Name="EnumerateCheck"
+        Margin="0 0 16 0"
+        Checked="OnInputChanged"
+        Content="Enumerate items"
+        ToolTip="Expands ${start=0,increment=1,padding=0} counter patterns in the replacement text; a shared counter advances for each renamed item."
+        Unchecked="OnInputChanged" />
+    </WrapPanel>
+
+    <!--  Preview list (virtualized; recomputed debounced in the background)  -->
+    <ListView
+      x:Name="PreviewList"
+      Grid.Row="3"
+      ScrollViewer.CanContentScroll="True"
+      VirtualizingPanel.IsVirtualizing="True"
+      VirtualizingPanel.VirtualizationMode="Recycling">
+      <ListView.View>
+        <GridView>
+          <GridViewColumn
+            Width="300"
+            DisplayMemberBinding="{Binding Original}"
+            Header="Original" />
+          <GridViewColumn
+            Width="300"
+            DisplayMemberBinding="{Binding New}"
+            Header="New Name" />
+          <GridViewColumn
+            x:Name="StatusColumn"
+            Width="0"
+            DisplayMemberBinding="{Binding Error}"
+            Header="Status" />
+        </GridView>
+      </ListView.View>
+    </ListView>
+
+    <!--  Summary + buttons  -->
+    <Grid Grid.Row="4" Margin="0 12 0 0">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="Auto" />
+        <ColumnDefinition Width="Auto" />
+      </Grid.ColumnDefinitions>
+      <TextBlock
+        x:Name="SummaryText"
+        Grid.Column="0"
+        VerticalAlignment="Center"
+        Foreground="{DynamicResource SearchResultPath}"
+        Text="0 of 0 will be renamed (0 skipped)" />
+      <Button
+        x:Name="RenameButton"
+        Grid.Column="1"
+        Width="80"
+        Height="26"
+        Margin="0 0 8 0"
+        Click="OnRenameClick"
+        Content="Rename"
+        IsDefault="True"
+        IsEnabled="False" />
+      <Button
+        Grid.Column="2"
+        Width="80"
+        Height="26"
+        Content="Cancel"
+        IsCancel="True" />
+    </Grid>
+  </Grid>
+</Window>

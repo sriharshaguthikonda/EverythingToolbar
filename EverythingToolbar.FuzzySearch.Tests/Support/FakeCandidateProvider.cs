@@ -7,6 +7,8 @@ namespace EverythingToolbar.FuzzySearch.Tests.Support
     /// <summary>Test double: serves fixed candidate lists; never returns the term itself.</summary>
     public sealed class FakeCandidateProvider : ITypoCandidateProvider
     {
+        public int IndexVersion { get; set; } = 1;
+
         private readonly Dictionary<string, IReadOnlyList<TypoCandidate>> _candidates;
 
         public FakeCandidateProvider(Dictionary<string, IReadOnlyList<TypoCandidate>> candidates)
