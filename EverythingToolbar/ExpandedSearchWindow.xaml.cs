@@ -63,6 +63,7 @@ namespace EverythingToolbar
             _sessionStore.Load();
 
             ApplyFolderSidebarVisibility(_settings.IsFolderSidebarEnabled);
+            ApplyViewMenuChecks();
         }
 
         private void OnWindowClosed(object? sender, EventArgs e)
@@ -479,6 +480,27 @@ namespace EverythingToolbar
         {
             StatusBar.Visibility =
                 StatusBar.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        // View > Details / Thumbnails radio pair (Everything-1.5 parity): both items are checkable
+        // and kept mutually exclusive by hand since WPF MenuItems do not group. The setting is the
+        // source of truth; SearchResultsDataView listens for changes and swaps its presentation.
+        private void OnDetailsViewClick(object sender, RoutedEventArgs e)
+        {
+            _settings.IsThumbnailsView = false;
+            ApplyViewMenuChecks();
+        }
+
+        private void OnThumbnailsViewClick(object sender, RoutedEventArgs e)
+        {
+            _settings.IsThumbnailsView = true;
+            ApplyViewMenuChecks();
+        }
+
+        private void ApplyViewMenuChecks()
+        {
+            DetailsViewMenuItem.IsChecked = !_settings.IsThumbnailsView;
+            ThumbnailsViewMenuItem.IsChecked = _settings.IsThumbnailsView;
         }
 
         private void OnToggleFolderSidebarClick(object sender, RoutedEventArgs e)

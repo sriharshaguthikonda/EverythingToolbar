@@ -66,8 +66,41 @@
       <TextBlock
         VerticalAlignment="Center"
         Foreground="{DynamicResource SearchResultPath}"
-        Text="{Binding TypeName, Mode=OneTime, TargetNullValue=''}" />
+        Text="{Binding TypeName, Mode=OneTime}" />
     </DataTemplate>
+    <!--
+      Thumbnails mode tile: 48px shell thumbnail (async, icon fallback) with name + path.
+      Single-column large-icon rows keep the ListView's row virtualization intact; a true
+      multi-column virtualizing thumbnail grid is deferred (needs a custom virtualizing panel).
+    -->
+    <DataTemplate x:Key="ThumbnailTileCellTemplate">
+      <StackPanel Margin="4" Orientation="Horizontal">
+        <Image
+          Width="48"
+          Height="48"
+          VerticalAlignment="Center"
+          b:ResultThumbnail.Result="{Binding Mode=OneTime}" />
+        <StackPanel Margin="10 0 0 0" VerticalAlignment="Center">
+          <TextBlock
+            h:HighlightedText.Source="{Binding HighlightedFileName, Mode=OneTime}"
+            Foreground="{DynamicResource SearchResultFileName}"
+            TextTrimming="CharacterEllipsis"
+            ToolTip="{Binding FileName, Mode=OneTime}" />
+          <TextBlock
+            h:HighlightedText.Source="{Binding HighlightedPath, Mode=OneTime}"
+            Foreground="{DynamicResource SearchResultPath}"
+            TextTrimming="CharacterEllipsis"
+            ToolTip="{Binding Path, Mode=OneTime}" />
+        </StackPanel>
+      </StackPanel>
+    </DataTemplate>
+    <!--  Alternate ListView.View swapped in by the code-behind when IsThumbnailsView is set.  -->
+    <GridView x:Key="ThumbnailsView">
+      <GridViewColumn
+        Width="420"
+        CellTemplate="{StaticResource ThumbnailTileCellTemplate}"
+        Header="Results" />
+    </GridView>
   </UserControl.Resources>
 
   <ListView

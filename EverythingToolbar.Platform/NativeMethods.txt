@@ -30,6 +30,8 @@ PROCESS_INFORMATION
 CloseHandle
 SHOpenFolderAndSelectItems
 SHParseDisplayName
+SHCreateItemFromParsingName
+IShellItemImageFactory
 CreateWindowEx
 SetWindowLongPtr
 DefWindowProc

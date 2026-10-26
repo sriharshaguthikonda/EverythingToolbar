@@ -102,6 +102,9 @@ namespace EverythingToolbar.App
         bool IsThumbnailsEnabled { get; set; }
 
         [Option(DefaultValue = false)]
+        bool IsThumbnailsView { get; set; }
+
+        [Option(DefaultValue = false)]
         bool IsSystemContextMenuDefault { get; set; }
 
         [Option(DefaultValue = false)]

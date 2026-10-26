@@ -86,19 +86,44 @@ namespace EverythingToolbar.Controls
 
             if (ResultsListView.View is GridView gridView)
                 gridView.ColumnHeaderContextMenu = BuildHeaderContextMenu();
+
+            _detailsView = ResultsListView.View;
+        }
+
+        /// <summary>The Details (full GridView) presentation, restored when Thumbnails is turned off.</summary>
+        private ViewBase? _detailsView;
+
+        /// <summary>
+        /// View mode only changes presentation: selection, sort state, context menu, drag and edit
+        /// gestures all live on the shared ListView and keep working across the swap.
+        /// </summary>
+        private void ApplyViewMode()
+        {
+            var view = _settings.IsThumbnailsView ? (ViewBase)FindResource("ThumbnailsView") : _detailsView;
+            if (view != null && !ReferenceEquals(ResultsListView.View, view))
+                ResultsListView.View = view;
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
             _searchState.PropertyChanged += OnSearchStateChanged;
+            _settings.PropertyChanged += OnSettingsPropertyChanged;
             _session.Start();
             ApplyColumnVisibilityFromSettings();
+            ApplyViewMode();
             UpdateSortGlyphs();
         }
 
         private void OnUnloaded(object sender, RoutedEventArgs e)
         {
             _searchState.PropertyChanged -= OnSearchStateChanged;
+            _settings.PropertyChanged -= OnSettingsPropertyChanged;
+        }
+
+        private void OnSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName is nameof(ISettings.IsThumbnailsView))
+                ApplyViewMode();
         }
 
         private void OnSearchStateChanged(object? sender, PropertyChangedEventArgs e)

@@ -130,6 +130,17 @@
           Header="Toggle Preview"
           InputGestureText="Ctrl+P" />
         <MenuItem Click="OnToggleStatusBarClick" Header="Toggle Status Bar" />
+        <Separator />
+        <MenuItem
+          x:Name="DetailsViewMenuItem"
+          Click="OnDetailsViewClick"
+          Header="Details"
+          IsCheckable="True" />
+        <MenuItem
+          x:Name="ThumbnailsViewMenuItem"
+          Click="OnThumbnailsViewClick"
+          Header="Thumbnails"
+          IsCheckable="True" />
       </MenuItem>
       <MenuItem Header="Search">
         <MenuItem

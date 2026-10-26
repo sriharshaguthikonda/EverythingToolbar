@@ -39,8 +39,10 @@ namespace EverythingToolbar.Icons
         private readonly SearchResult _result;
         private ImageSource? _icon;
         private ImageSource? _previewImage;
+        private ImageSource? _thumbnail;
         private bool _iconLoadStarted;
         private bool _previewLoadStarted;
+        private bool _thumbnailLoadStarted;
         private bool _useThumbnail;
 
         internal ResultImages(SearchResult result)
@@ -66,6 +68,53 @@ namespace EverythingToolbar.Icons
                 _previewImage = value;
                 OnPropertyChanged(PreviewImageChangedArgs);
             }
+        }
+
+        private static readonly PropertyChangedEventArgs ThumbnailChangedArgs = new(nameof(Thumbnail));
+
+        /// <summary>
+        /// Large image for the Thumbnails view (Details view keeps the small Icon). Null until
+        /// <see cref="EnsureThumbnailLoading"/> completes; falls back to the file icon when the
+        /// shell has no thumbnail for the item.
+        /// </summary>
+        public ImageSource? Thumbnail
+        {
+            get => _thumbnail;
+            private set
+            {
+                _thumbnail = value;
+                OnPropertyChanged(ThumbnailChangedArgs);
+            }
+        }
+
+        /// <summary>
+        /// Kicks off the one-shot async thumbnail load (48 logical px) for the Thumbnails view.
+        /// Runs on the thread pool via the shell thumbnail service and falls back to the cached
+        /// extension icon when no thumbnail exists; the PropertyChanged raised from the worker
+        /// thread is fine because every published ImageSource is frozen.
+        /// </summary>
+        public void EnsureThumbnailLoading()
+        {
+            if (_thumbnailLoadStarted)
+                return;
+            _thumbnailLoadStarted = true;
+
+            const int ThumbnailPixelSize = 48;
+            var path = _result.FullPathAndFileName;
+
+            Task.Run(async () =>
+            {
+                ImageSource? image = await Platform
+                    .Shell.ThumbnailProvider.Instance.GetThumbnailAsync(path, ThumbnailPixelSize)
+                    .ConfigureAwait(false);
+
+                // No thumbnail (or extraction failed): reuse the details-view icon pipeline so
+                // the row still shows a meaningful image.
+                image ??= IconProvider.GetImage(path, _result.IsFile, ThumbnailPixelSize);
+
+                if (image != null)
+                    Thumbnail = image;
+            });
         }
 
         public void EnsureIconLoading()
