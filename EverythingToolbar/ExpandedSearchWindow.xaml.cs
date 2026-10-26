@@ -9,7 +9,6 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.DependencyInjection;
-using EverythingToolbar.App.Helpers;
 using EverythingToolbar.Core.Data;
 using EverythingToolbar.Search;
 using NLog;

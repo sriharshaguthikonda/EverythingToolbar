@@ -8,7 +8,6 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.DependencyInjection;
-using EverythingToolbar.App.Search;
 using EverythingToolbar.Core.Data;
 using EverythingToolbar.Platform.Shell;
 using EverythingToolbar.Search;

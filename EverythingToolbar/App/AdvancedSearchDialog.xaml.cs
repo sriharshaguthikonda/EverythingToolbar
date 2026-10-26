@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
-using EverythingToolbar.Core.Search;
 
 namespace EverythingToolbar.App
 {

@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using CommunityToolkit.Mvvm.DependencyInjection;
-using EverythingToolbar.App.Search;
 using EverythingToolbar.Core.Search;
 
 namespace EverythingToolbar.Controls
