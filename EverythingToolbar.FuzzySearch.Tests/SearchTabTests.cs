@@ -84,6 +84,48 @@ namespace EverythingToolbar.FuzzySearch.Tests
         }
 
         [Fact]
+        public void RestoreSnapshot_DoesNotMutateSettingsMatchFlags()
+        {
+            var (state, _, settings) = CreateSearchState();
+            settings.IsMatchCase = true;
+            settings.IsRegExEnabled = true;
+            settings.IsHideResultOmissions = true;
+            var snapshot = state.CaptureSnapshot();
+
+            // Simulate another tab (or the user) flipping the current flags, then switch back.
+            settings.IsMatchCase = false;
+            settings.IsRegExEnabled = false;
+            settings.IsHideResultOmissions = false;
+            state.RestoreSnapshot(snapshot);
+
+            Assert.True(state.IsMatchCase);
+            Assert.True(state.IsRegExEnabled);
+            Assert.True(state.IsHideResultOmissions);
+            // Tab switching is side-effect-free with respect to the persisted settings.
+            Assert.False(settings.IsMatchCase);
+            Assert.False(settings.IsRegExEnabled);
+            Assert.False(settings.IsHideResultOmissions);
+        }
+
+        [Fact]
+        public void SettingsChanges_FlowIntoSearchStateFlags()
+        {
+            var (state, _, settings) = CreateSearchState();
+            Assert.False(state.IsMatchCase);
+            Assert.False(state.IsRegExEnabled);
+
+            settings.IsMatchCase = true;
+            settings.IsRegExEnabled = true;
+
+            Assert.True(state.IsMatchCase);
+            Assert.True(state.IsRegExEnabled);
+
+            settings.IsMatchCase = false;
+
+            Assert.False(state.IsMatchCase);
+        }
+
+        [Fact]
         public void DisplayName_EmptyQuery_ShowsNewTab()
         {
             var tab = new SearchTab { SearchTerm = "  " };

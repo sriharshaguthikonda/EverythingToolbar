@@ -18,16 +18,83 @@ namespace EverythingToolbar.App.Search
             _useSettingsSortDirection ? IsSortDescending
             : Filter.SortBy is not null ? Filter.SortDescending
             : IsSortDescending;
-        public bool IsMatchCase => _settings.IsMatchCase;
-        public bool IsMatchPath => _settings.IsMatchPath;
-        public bool IsMatchWholeWord => _settings.IsMatchWholeWord;
-        public bool IsMatchDiacritics => _settings.IsMatchDiacritics;
-        public bool IsMatchPrefix => _settings.IsMatchPrefix;
-        public bool IsMatchSuffix => _settings.IsMatchSuffix;
-        public bool IsIgnorePunctuation => _settings.IsIgnorePunctuation;
-        public bool IsIgnoreWhitespace => _settings.IsIgnoreWhitespace;
-        public bool IsRegExEnabled => _settings.IsRegExEnabled;
-        public bool IsHideResultOmissions => _settings.IsHideResultOmissions;
+
+        // Per-tab match flags: SearchState owns these (carried through tab snapshots). The
+        // settings ini keeps only the user's defaults, read at construction and re-applied when
+        // settings change — the compact popup (SearchBox/SettingsControl) and the expanded
+        // window's Search menu bind/toggle ISettings directly, so their changes flow IN here via
+        // OnSettingsChanged. Setters never write back to settings, so tab switches
+        // (RestoreSnapshot) stay side-effect-free with respect to the persisted ini.
+        private bool _isMatchCase;
+        private bool _isMatchPath;
+        private bool _isMatchWholeWord;
+        private bool _isMatchDiacritics;
+        private bool _isMatchPrefix;
+        private bool _isMatchSuffix;
+        private bool _isIgnorePunctuation;
+        private bool _isIgnoreWhitespace;
+        private bool _isRegExEnabled;
+        private bool _isHideResultOmissions;
+
+        public bool IsMatchCase
+        {
+            get => _isMatchCase;
+            private set => SetProperty(ref _isMatchCase, value);
+        }
+
+        public bool IsMatchPath
+        {
+            get => _isMatchPath;
+            private set => SetProperty(ref _isMatchPath, value);
+        }
+
+        public bool IsMatchWholeWord
+        {
+            get => _isMatchWholeWord;
+            private set => SetProperty(ref _isMatchWholeWord, value);
+        }
+
+        public bool IsMatchDiacritics
+        {
+            get => _isMatchDiacritics;
+            private set => SetProperty(ref _isMatchDiacritics, value);
+        }
+
+        public bool IsMatchPrefix
+        {
+            get => _isMatchPrefix;
+            private set => SetProperty(ref _isMatchPrefix, value);
+        }
+
+        public bool IsMatchSuffix
+        {
+            get => _isMatchSuffix;
+            private set => SetProperty(ref _isMatchSuffix, value);
+        }
+
+        public bool IsIgnorePunctuation
+        {
+            get => _isIgnorePunctuation;
+            private set => SetProperty(ref _isIgnorePunctuation, value);
+        }
+
+        public bool IsIgnoreWhitespace
+        {
+            get => _isIgnoreWhitespace;
+            private set => SetProperty(ref _isIgnoreWhitespace, value);
+        }
+
+        public bool IsRegExEnabled
+        {
+            get => _isRegExEnabled;
+            private set => SetProperty(ref _isRegExEnabled, value);
+        }
+
+        public bool IsHideResultOmissions
+        {
+            get => _isHideResultOmissions;
+            private set => SetProperty(ref _isHideResultOmissions, value);
+        }
 
         private bool _useSettingsSortKey;
         private bool _useSettingsSortDirection;
@@ -75,6 +142,8 @@ namespace EverythingToolbar.App.Search
             _everythingClient = everythingClient;
 
             _currentFilter = _filterProvider.GetInitialFilter();
+
+            ApplyFlagsFrom(_settings);
 
             _settings.PropertyChanged += OnSettingsChanged;
         }
@@ -308,9 +377,10 @@ namespace EverythingToolbar.App.Search
 
         /// <summary>
         /// Restores a tab snapshot: sets the query and filter, forces the captured effective sort
-        /// as an explicit override, and writes the captured match flags back to settings. Raises
-        /// the same property change notifications the search session listens to (an explicit pass
-        /// at the end guarantees a rebuild even when individual values were unchanged).
+        /// as an explicit override, and applies the captured match flags to this state's
+        /// per-tab properties (settings are not touched). Raises the same property change
+        /// notifications the search session listens to (an explicit pass at the end guarantees a
+        /// rebuild even when individual values were unchanged).
         /// </summary>
         public void RestoreSnapshot(SearchTab tab)
         {
@@ -331,19 +401,21 @@ namespace EverythingToolbar.App.Search
                 ClearSecondarySorts();
             }
 
-            _settings.IsMatchCase = tab.IsMatchCase;
-            _settings.IsMatchPath = tab.IsMatchPath;
-            _settings.IsMatchWholeWord = tab.IsMatchWholeWord;
-            _settings.IsMatchDiacritics = tab.IsMatchDiacritics;
-            _settings.IsMatchPrefix = tab.IsMatchPrefix;
-            _settings.IsMatchSuffix = tab.IsMatchSuffix;
-            _settings.IsIgnorePunctuation = tab.IsIgnorePunctuation;
-            _settings.IsIgnoreWhitespace = tab.IsIgnoreWhitespace;
-            _settings.IsRegExEnabled = tab.IsRegExEnabled;
-            _settings.IsHideResultOmissions = tab.IsHideResultOmissions;
+            // Match flags are SearchState-owned; setting the local properties leaves the
+            // settings ini untouched (per-tab isolation).
+            IsMatchCase = tab.IsMatchCase;
+            IsMatchPath = tab.IsMatchPath;
+            IsMatchWholeWord = tab.IsMatchWholeWord;
+            IsMatchDiacritics = tab.IsMatchDiacritics;
+            IsMatchPrefix = tab.IsMatchPrefix;
+            IsMatchSuffix = tab.IsMatchSuffix;
+            IsIgnorePunctuation = tab.IsIgnorePunctuation;
+            IsIgnoreWhitespace = tab.IsIgnoreWhitespace;
+            IsRegExEnabled = tab.IsRegExEnabled;
+            IsHideResultOmissions = tab.IsHideResultOmissions;
 
-            // The settings writes above normally flow back via OnSettingsChanged, but only when a
-            // value actually changes; raise explicitly so the session always rebuilds on switch.
+            // The property setters above only raise on change; raise explicitly so the session
+            // always rebuilds on switch.
             OnPropertyChanged(nameof(SearchTerm));
             OnPropertyChanged(nameof(IsMatchCase));
             OnPropertyChanged(nameof(IsMatchPath));
@@ -357,39 +429,40 @@ namespace EverythingToolbar.App.Search
             OnPropertyChanged(nameof(IsHideResultOmissions));
         }
 
+        /// <summary>
+        /// Reads the match-flag defaults from settings into this state's per-tab properties
+        /// (settings remain the source for startup defaults and external changes, e.g. the
+        /// compact popup or settings UI toggles). Pure with respect to settings: never writes.
+        /// </summary>
+        internal void ApplyFlagsFrom(ISettings settings)
+        {
+            IsMatchCase = settings.IsMatchCase;
+            IsMatchPath = settings.IsMatchPath;
+            IsMatchWholeWord = settings.IsMatchWholeWord;
+            IsMatchDiacritics = settings.IsMatchDiacritics;
+            IsMatchPrefix = settings.IsMatchPrefix;
+            IsMatchSuffix = settings.IsMatchSuffix;
+            IsIgnorePunctuation = settings.IsIgnorePunctuation;
+            IsIgnoreWhitespace = settings.IsIgnoreWhitespace;
+            IsRegExEnabled = settings.IsRegExEnabled;
+            IsHideResultOmissions = settings.IsHideResultOmissions;
+        }
+
         private void OnSettingsChanged(object? sender, PropertyChangedEventArgs e)
         {
             switch (e.PropertyName)
             {
                 case nameof(ISettings.IsMatchCase):
-                    OnPropertyChanged(nameof(IsMatchCase));
-                    break;
                 case nameof(ISettings.IsMatchPath):
-                    OnPropertyChanged(nameof(IsMatchPath));
-                    break;
                 case nameof(ISettings.IsMatchWholeWord):
-                    OnPropertyChanged(nameof(IsMatchWholeWord));
-                    break;
                 case nameof(ISettings.IsMatchDiacritics):
-                    OnPropertyChanged(nameof(IsMatchDiacritics));
-                    break;
                 case nameof(ISettings.IsMatchPrefix):
-                    OnPropertyChanged(nameof(IsMatchPrefix));
-                    break;
                 case nameof(ISettings.IsMatchSuffix):
-                    OnPropertyChanged(nameof(IsMatchSuffix));
-                    break;
                 case nameof(ISettings.IsIgnorePunctuation):
-                    OnPropertyChanged(nameof(IsIgnorePunctuation));
-                    break;
                 case nameof(ISettings.IsIgnoreWhitespace):
-                    OnPropertyChanged(nameof(IsIgnoreWhitespace));
-                    break;
                 case nameof(ISettings.IsRegExEnabled):
-                    OnPropertyChanged(nameof(IsRegExEnabled));
-                    break;
                 case nameof(ISettings.IsHideResultOmissions):
-                    OnPropertyChanged(nameof(IsHideResultOmissions));
+                    ApplyFlagsFrom(_settings);
                     break;
                 case nameof(ISettings.SortBy):
                     OnPropertyChanged(nameof(SortBy));
