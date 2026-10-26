@@ -381,5 +381,237 @@ namespace EverythingToolbar.FuzzySearch.Tests
                 Assert.Equal("photo.webp", item.New);
             }
         }
+
+        /// <summary>
+        /// Case-transformation semantics, pinned against PowerToys PowerRename:
+        /// the case ops are whole-name post-processing flags (PowerRenameInterfaces.h
+        /// Uppercase/Lowercase/Titlecase/Capitalized), applied AFTER replacement via
+        /// Helpers.cpp GetTransformedFileName, including when nothing matched
+        /// (Renaming.cpp falls back to the source name first). The regex replace
+        /// term itself has NO \U/\L format support (PowerRenameRegEx.cpp
+        /// RegexReplaceEx passes the replace term verbatim to regex_replace).
+        /// </summary>
+        public class CaseTransform
+        {
+            [Fact]
+            public void UppercaseTransformsTargetAfterReplace()
+            {
+                var options = new BatchRenameOptions(
+                    "report",
+                    "draft",
+                    false,
+                    false,
+                    false,
+                    false,
+                    null,
+                    FileNameCase.Uppercase
+                );
+                var item = PlanOne("report.txt", options);
+                Assert.Equal("DRAFT.txt", item.New);
+            }
+
+            [Fact]
+            public void LowercaseTransformsTargetAfterReplace()
+            {
+                var options = new BatchRenameOptions(
+                    "report",
+                    "DRAFT",
+                    false,
+                    false,
+                    false,
+                    false,
+                    null,
+                    FileNameCase.Lowercase
+                );
+                var item = PlanOne("report.TXT", options);
+                Assert.Equal("draft.TXT", item.New);
+            }
+
+            [Fact]
+            public void IncludeExtensionTransformsFullName()
+            {
+                var options = new BatchRenameOptions(
+                    "report",
+                    "draft",
+                    false,
+                    false,
+                    false,
+                    true,
+                    null,
+                    FileNameCase.Uppercase
+                );
+                var item = PlanOne("report.txt", options);
+                Assert.Equal("DRAFT.TXT", item.New);
+            }
+
+            [Fact]
+            public void CaseTransformAppliesEvenWithoutMatch()
+            {
+                // Renaming.cpp: when Replace yields nothing but a case flag is set,
+                // the source name is copied and transformed anyway.
+                var options = new BatchRenameOptions(
+                    "nomatch",
+                    "x",
+                    false,
+                    false,
+                    false,
+                    false,
+                    null,
+                    FileNameCase.Uppercase
+                );
+                var item = PlanOne("file.txt", options);
+                Assert.Equal("FILE.txt", item.New);
+            }
+
+            [Fact]
+            public void CaseTransformAloneIsNotANoOp()
+            {
+                var options = new BatchRenameOptions("", "", false, false, false, false, null, FileNameCase.Lowercase);
+                var plan = BatchRenameEngine.Plan(new[] { "FILE.TXT" }, options);
+                Assert.False(plan.IsNoOp);
+                // Extension is preserved (stem-only target, PowerRename NameOnly parity).
+                Assert.Equal("file.TXT", plan.Items[0].New);
+            }
+
+            [Fact]
+            public void NoTransformIsDefaultPassthrough()
+            {
+                var options = new BatchRenameOptions("a", "B", false, false, false, false, null);
+                var item = PlanOne("banana.txt", options);
+                Assert.Equal("bBnana.txt", item.New);
+            }
+
+            [Fact]
+            public void TitlecaseCapitalizesEachWordKeepingExtension()
+            {
+                var options = new BatchRenameOptions(
+                    "report",
+                    "the quick brown fox",
+                    false,
+                    false,
+                    false,
+                    false,
+                    null,
+                    FileNameCase.Titlecase
+                );
+                var item = PlanOne("report.docx", options);
+                Assert.Equal("The Quick Brown Fox.docx", item.New);
+            }
+
+            [Fact]
+            public void TitlecaseAlwaysCapitalizesFirstAndLastWord()
+            {
+                var options = new BatchRenameOptions(
+                    "file",
+                    "the end of the",
+                    false,
+                    false,
+                    false,
+                    false,
+                    null,
+                    FileNameCase.Titlecase
+                );
+                var item = PlanOne("file", options);
+                Assert.Equal("The End of The", item.New);
+            }
+
+            [Fact]
+            public void TitlecaseLowercasesNonWordStarts()
+            {
+                var options = new BatchRenameOptions(
+                    "file",
+                    "McLOUD-DONUT",
+                    false,
+                    false,
+                    false,
+                    false,
+                    null,
+                    FileNameCase.Titlecase
+                );
+                var item = PlanOne("file", options);
+                Assert.Equal("Mcloud-Donut", item.New);
+            }
+
+            [Fact]
+            public void TitlecaseKeepsContractionTail()
+            {
+                // Apostrophe: "don't stop" — the 't after the apostrophe is not a word
+                // start (it lowercases), and the apostrophe itself is skipped.
+                var options = new BatchRenameOptions(
+                    "file",
+                    "don't stop",
+                    false,
+                    false,
+                    false,
+                    false,
+                    null,
+                    FileNameCase.Titlecase
+                );
+                var item = PlanOne("file", options);
+                Assert.Equal("Don't Stop", item.New);
+            }
+
+            [Fact]
+            public void CapitalizedUppercasesEveryWordWithoutExceptions()
+            {
+                var options = new BatchRenameOptions(
+                    "file",
+                    "the cat in the hat",
+                    false,
+                    false,
+                    false,
+                    false,
+                    null,
+                    FileNameCase.Capitalized
+                );
+                var item = PlanOne("file", options);
+                Assert.Equal("The Cat In The Hat", item.New);
+            }
+
+            [Fact]
+            public void CaseTransformCombinesWithRegexSubstitution()
+            {
+                var options = new BatchRenameOptions(
+                    "^(\\w+)-(\\w+)$",
+                    "$2 $1",
+                    true,
+                    false,
+                    false,
+                    false,
+                    null,
+                    FileNameCase.Uppercase
+                );
+                var item = PlanOne("alpha-beta.txt", options);
+                Assert.Equal("BETA ALPHA.txt", item.New);
+            }
+
+            [Fact]
+            public void CaseTransformCombinesWithCounter()
+            {
+                var options = new BatchRenameOptions(
+                    "",
+                    "file ${start=1,increment=1,padding=2}",
+                    false,
+                    false,
+                    false,
+                    false,
+                    "${start=1,increment=1,padding=2}",
+                    FileNameCase.Uppercase
+                );
+                var plan = BatchRenameEngine.Plan(new[] { "a.txt", "b.txt" }, options);
+                Assert.Equal("FILE 01.txt", plan.Items[0].New);
+                Assert.Equal("FILE 02.txt", plan.Items[1].New);
+            }
+
+            [Fact]
+            public void LiteralModeHasNoCaseOpsInReplaceTerm()
+            {
+                // PowerRename's replace term has no \U/\L syntax in any mode; a literal
+                // "\U" is just literal text and no transformation happens.
+                var options = new BatchRenameOptions("a", "\\Ux\\E", false, false, false, false, null);
+                var item = PlanOne("banana.txt", options);
+                Assert.Equal("b\\Ux\\Enana.txt", item.New);
+            }
+        }
     }
 }

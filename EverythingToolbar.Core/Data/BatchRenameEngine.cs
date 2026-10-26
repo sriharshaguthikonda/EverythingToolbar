@@ -6,6 +6,24 @@ using System.Text.RegularExpressions;
 namespace EverythingToolbar.Core.Data
 {
     /// <summary>
+    /// Whole-name case transformation applied after the search/replace step.
+    /// Semantics follow Microsoft PowerToys PowerRename (MIT):
+    /// src/modules/powerrename/lib/PowerRenameInterfaces.h lines 20-23 define the
+    /// Uppercase/Lowercase/Titlecase/Capitalized flags, and
+    /// src/modules/powerrename/lib/Helpers.cpp GetTransformedFileName applies them
+    /// to the file name (stem-only variants excluded here — our engine always
+    /// renames the stem unless IncludeExtension is set).
+    /// </summary>
+    public enum FileNameCase
+    {
+        None,
+        Uppercase,
+        Lowercase,
+        Titlecase,
+        Capitalized,
+    }
+
+    /// <summary>
     /// Options for <see cref="BatchRenameEngine.Plan"/>. Semantics follow Microsoft
     /// PowerToys PowerRename (MIT) — implemented from behaviour, not translated from C++.
     /// </summary>
@@ -27,6 +45,11 @@ namespace EverythingToolbar.Core.Data
     /// items") support: when non-null and non-empty, <c>${...}</c> counter patterns in
     /// Replace are expanded. The pattern body itself controls start/increment/padding,
     /// so this string only acts as the on/off switch.</param>
+    /// <param name="CaseTransform">PowerRename parity case transformation applied to
+    /// the rename target (stem, or full name when <paramref name="IncludeExtension"/>
+    /// is set) AFTER the replacement step — including when nothing matched, matching
+    /// Renaming.cpp which falls back to the source name when the replace produced
+    /// nothing but a case flag is set.</param>
     public sealed record BatchRenameOptions(
         string Search,
         string Replace,
@@ -34,7 +57,8 @@ namespace EverythingToolbar.Core.Data
         bool CaseSensitive,
         bool MatchAllOccurrences,
         bool IncludeExtension,
-        string? CounterFormat
+        string? CounterFormat = null,
+        FileNameCase CaseTransform = FileNameCase.None
     )
     {
         public static BatchRenameOptions Default { get; } = new("", "", false, false, false, false, null);
@@ -76,7 +100,17 @@ namespace EverythingToolbar.Core.Data
     ///    Multiple counter patterns in one Replace each receive the same per-item
     ///    counter value (formatted with their own start/increment/padding). Counters
     ///    never increment within a single name.
-    ///  - Case-changing operations (uppercase/lowercase/title-case) are out of scope v1.
+    ///  - Case-changing operations are whole-name post-processing flags (NOT regex
+    ///    format spans — PowerRename's replace term has no \U/\L; boost ECMAScript
+    ///    format is used verbatim, see PowerRenameRegEx.cpp RegexReplaceEx which
+    ///    passes the replace term straight to regex_replace). Uppercase/Lowercase/
+    ///    Titlecase/Capitalized are applied to the new name after replacement, and
+    ///    also when nothing matched (Renaming.cpp copies the source name before
+    ///    transforming when the replace produced no result). Titlecase lowercases
+    ///    each word then capitalizes the first letter, skipping a fixed exception
+    ///    list (a, an, to, the, at, by, for, in, of, on, up, and, as, but, or, nor)
+    ///    except for the first and last word; Capitalized does the same without the
+    ///    exception list (Helpers.cpp GetTransformedFileName).
     ///  - No I/O, no randomness, no DateTime: CultureInvariant is used everywhere
     ///    except the hardcoded English error strings.
     /// </summary>
@@ -117,8 +151,8 @@ namespace EverythingToolbar.Core.Data
                 : new List<CounterSpec>();
 
             // A plan is a no-op when there is nothing to search for and no counter
-            // pattern that could still alter the name.
-            if (search.Length == 0 && counters.Count == 0)
+            // pattern or case transformation that could still alter the name.
+            if (search.Length == 0 && counters.Count == 0 && options.CaseTransform == FileNameCase.None)
             {
                 return new BatchRenamePlan(
                     fileNames.Select(n => new BatchRenameItem(n, n, null)).ToList(),
@@ -187,7 +221,7 @@ namespace EverythingToolbar.Core.Data
                     matched = true;
                 }
 
-                var newName = newTarget + suffix;
+                var newName = ApplyCaseTransform(newTarget, options.CaseTransform) + suffix;
 
                 // PowerRename advances the shared counter only for items that matched.
                 if (matched)
@@ -312,5 +346,122 @@ namespace EverythingToolbar.Core.Data
         }
 
         private readonly record struct CounterSpec(long Start, long Increment, long Padding);
+
+        /// <summary>
+        /// Apply a PowerRename-style whole-target case transformation. Always applied,
+        /// even when the replacement did not match (Renaming.cpp lines 182-189 fall
+        /// back to the source name before transforming). Culture-invariant casing.
+        /// </summary>
+        private static string ApplyCaseTransform(string target, FileNameCase transform)
+        {
+            return transform switch
+            {
+                FileNameCase.Uppercase => target.ToUpperInvariant(),
+                FileNameCase.Lowercase => target.ToLowerInvariant(),
+                FileNameCase.Titlecase => ToTitlecase(target, useExceptions: true),
+                FileNameCase.Capitalized => ToTitlecase(target, useExceptions: false),
+                _ => target,
+            };
+        }
+
+        // Helpers.cpp Titlecase exception list (exact order/content).
+        private static readonly string[] TitlecaseExceptions =
+        {
+            "a",
+            "an",
+            "to",
+            "the",
+            "at",
+            "by",
+            "for",
+            "in",
+            "of",
+            "on",
+            "up",
+            "and",
+            "as",
+            "but",
+            "or",
+            "nor",
+        };
+
+        /// <summary>
+        /// Port of the word-casing loop shared by PowerRename's Titlecase and
+        /// Capitalized transforms (Helpers.cpp GetTransformedFileName). Word starts
+        /// are the first character, or any character after whitespace/punctuation —
+        /// except that an apostrophe keeps a word going (contractions like "don't"),
+        /// unless the character two positions back is punctuation/whitespace.
+        /// Titlecase capitalizes a word's first letter unless it is an exception word
+        /// that is neither the first nor the last word; Capitalized always does.
+        /// Characters after the trailing punctuation/whitespace run are left untouched.
+        /// </summary>
+        private static string ToTitlecase(string stem, bool useExceptions)
+        {
+            var chars = stem.ToCharArray();
+            var stemLength = chars.Length;
+            while (
+                stemLength > 0
+                && (char.IsWhiteSpace(chars[stemLength - 1]) || char.IsPunctuation(chars[stemLength - 1]))
+            )
+            {
+                stemLength--;
+            }
+
+            var isFirstWord = true;
+            for (var i = 0; i < stemLength; i++)
+            {
+                var atWordStart =
+                    i == 0
+                    || char.IsWhiteSpace(chars[i - 1])
+                    || (char.IsPunctuation(chars[i - 1]) && IsContractionBoundary(chars, i));
+                if (!atWordStart)
+                {
+                    chars[i] = char.ToLowerInvariant(chars[i]);
+                    continue;
+                }
+
+                if (char.IsWhiteSpace(chars[i]) || char.IsPunctuation(chars[i]))
+                    continue;
+
+                var wordLength = 0;
+                while (
+                    i + wordLength < stemLength
+                    && !char.IsWhiteSpace(chars[i + wordLength])
+                    && !char.IsPunctuation(chars[i + wordLength])
+                )
+                {
+                    wordLength++;
+                }
+
+                var word = new string(chars, i, wordLength).ToLowerInvariant();
+                if (
+                    isFirstWord
+                    || i + wordLength == stemLength
+                    || !useExceptions
+                    || Array.IndexOf(TitlecaseExceptions, word) < 0
+                )
+                {
+                    chars[i] = char.ToUpperInvariant(chars[i]);
+                    isFirstWord = false;
+                }
+            }
+
+            return new string(chars);
+        }
+
+        /// <summary>
+        /// PowerRename's contraction/single-quoted-word check (Helpers.cpp):
+        /// a boundary exists when there is no preceding apostrophe (i == 0 or the
+        /// previous character is not '\''), when the apostrophe is the first character,
+        /// or when the character before the apostrophe is punctuation/whitespace.
+        /// </summary>
+        private static bool IsContractionBoundary(char[] chars, int i)
+        {
+            if (i == 0 || chars[i - 1] != '\'')
+                return true;
+            if (i == 1)
+                return true;
+            return char.IsPunctuation(chars[i - 2]) || char.IsWhiteSpace(chars[i - 2]);
+        }
     }
 }

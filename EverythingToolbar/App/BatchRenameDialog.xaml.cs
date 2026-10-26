@@ -51,7 +51,8 @@ namespace EverythingToolbar.App
             bool CaseSensitive,
             bool MatchAll,
             bool IncludeExtension,
-            bool Enumerate
+            bool Enumerate,
+            FileNameCase CaseTransform
         )
         {
             public BatchRenameOptions ToOptions() =>
@@ -62,7 +63,8 @@ namespace EverythingToolbar.App
                     CaseSensitive,
                     MatchAll,
                     IncludeExtension,
-                    Enumerate ? CounterFormat : null
+                    Enumerate ? CounterFormat : null,
+                    CaseTransform
                 );
         }
 
@@ -84,6 +86,7 @@ namespace EverythingToolbar.App
         public BatchRenameDialog(IEnumerable<string> fullPaths)
         {
             InitializeComponent();
+            CaseTransformBox.SelectedIndex = 0;
 
             // Plan input is file NAMES only (engine contract); keep the original full paths so
             // the effective changes can be mapped back per file.
@@ -126,8 +129,19 @@ namespace EverythingToolbar.App
                 CaseSensitive: CaseSensitiveCheck.IsChecked == true,
                 MatchAll: MatchAllCheck.IsChecked == true,
                 IncludeExtension: IncludeExtensionCheck.IsChecked == true,
-                Enumerate: EnumerateCheck.IsChecked == true
+                Enumerate: EnumerateCheck.IsChecked == true,
+                CaseTransform: SelectedCaseTransform()
             );
+
+        private FileNameCase SelectedCaseTransform() =>
+            CaseTransformBox.SelectedIndex switch
+            {
+                1 => FileNameCase.Uppercase,
+                2 => FileNameCase.Lowercase,
+                3 => FileNameCase.Titlecase,
+                4 => FileNameCase.Capitalized,
+                _ => FileNameCase.None,
+            };
 
         private void SchedulePreview()
         {
