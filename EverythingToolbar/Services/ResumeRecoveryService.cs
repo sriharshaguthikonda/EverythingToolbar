@@ -1,7 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using System.Windows.Threading;
-using EverythingToolbar.App.Search;
 using EverythingToolbar.Platform.Search;
 using Microsoft.Win32;
 using NLog;

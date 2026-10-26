@@ -8,13 +8,9 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.DependencyInjection;
-using EverythingToolbar.App;
 using EverythingToolbar.App.Helpers;
 using EverythingToolbar.Core.Data;
-using EverythingToolbar.Core.Search;
-using EverythingToolbar.Platform.Shell;
 using EverythingToolbar.Search;
-using EverythingToolbar.Services;
 using NLog;
 
 namespace EverythingToolbar
@@ -26,7 +22,6 @@ namespace EverythingToolbar
         private static readonly ILogger Logger = ToolbarLogger.GetLogger<ExpandedSearchWindow>();
 
         private readonly ISettings _settings = Ioc.Default.GetRequiredService<ISettings>();
-        private readonly SearchSession _session = Ioc.Default.GetRequiredService<SearchSession>();
         private readonly SearchCommands _commands = Ioc.Default.GetRequiredService<SearchCommands>();
         private readonly App.Search.ResultsExportService _exportService =
             Ioc.Default.GetRequiredService<App.Search.ResultsExportService>();
@@ -757,7 +752,7 @@ namespace EverythingToolbar
             timer.Tick += (sender, _) =>
             {
                 ((DispatcherTimer)sender).Stop();
-                ExportStatusText.Text = null;
+                ExportStatusText.Text = string.Empty;
             };
             timer.Start();
         }

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using EverythingToolbar.App.Helpers;
 using EverythingToolbar.Core.Data;
 using EverythingToolbar.Platform.Shell;
 using NLog;

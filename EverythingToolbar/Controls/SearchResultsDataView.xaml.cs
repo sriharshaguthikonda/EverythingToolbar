@@ -8,7 +8,6 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.DependencyInjection;
-using EverythingToolbar.App;
 using EverythingToolbar.App.Search;
 using EverythingToolbar.Core.Data;
 using EverythingToolbar.Platform.Shell;
@@ -49,9 +48,8 @@ namespace EverythingToolbar.Controls
         /// <summary>Designed widths from the XAML, reused by "Reset Columns".</summary>
         private readonly Dictionary<GridViewColumn, double> _defaultColumnWidths = new();
 
-        /// <summary>Press point and row of an in-progress left-button drag gesture.</summary>
+        /// <summary>Press point of an in-progress left-button drag gesture.</summary>
         private Point? _dragStartPoint;
-        private ListViewItem? _dragStartItem;
 
         public SearchResultsDataView()
         {
@@ -334,14 +332,13 @@ namespace EverythingToolbar.Controls
         }
 
         /// <summary>
-        /// Records the press point and pressed row so a subsequent move beyond the drag thresholds
-        /// can start a file drag of the selected results. Drags are never started from a press on
-        /// the column headers or on empty space below the rows.
+        /// Records the press point so a subsequent move beyond the drag thresholds can start a
+        /// file drag of the selected results. Drags are never started from a press on the column
+        /// headers or on empty space below the rows.
         /// </summary>
         private void OnResultsListPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             _dragStartPoint = null;
-            _dragStartItem = null;
 
             if (IsColumnHeader(e.OriginalSource as DependencyObject))
                 return;
@@ -351,7 +348,6 @@ namespace EverythingToolbar.Controls
                 return;
 
             _dragStartPoint = e.GetPosition(ResultsListView);
-            _dragStartItem = item;
         }
 
         private void OnResultsListMouseMove(object sender, MouseEventArgs e)
@@ -359,7 +355,6 @@ namespace EverythingToolbar.Controls
             if (e.LeftButton != MouseButtonState.Pressed)
             {
                 _dragStartPoint = null;
-                _dragStartItem = null;
                 return;
             }
 
@@ -384,7 +379,6 @@ namespace EverythingToolbar.Controls
                 return;
 
             _dragStartPoint = null;
-            _dragStartItem = null;
 
             var data = new DataObject(DataFormats.FileDrop, paths);
             data.SetData(DataFormats.Text, paths[0]);
